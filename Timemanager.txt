@@ -1,1 +1,3 @@
-example text
+FORMAT: Date(Day/Month/Year) - Name - Time - What has been done
+
+18/02/2022 Vidar 1530 - 1600 - git stuff
