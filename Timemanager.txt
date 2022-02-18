@@ -1,1 +1,1 @@
-example text
+FORMAT: Date(Day/Month/Year) - Name - Time - What has been done
