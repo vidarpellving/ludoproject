@@ -2,4 +2,4 @@ FORMAT: Date(Day/Month/Year) - Name - Time - What has been done
 
 18/02/2022 Vidar 1530 - 1630 - git stuff
 18/02/2022 Sigurd 1530 - 1630 - learning to push and pull on git
-18/02/2022 Anton 1530 - 1630 - mastering to use git and githu
+18/02/2022 Anton 1530 - 1630 - mastering to use git and github
