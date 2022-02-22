@@ -5,3 +5,4 @@ FORMAT: Date(Day/Month/Year) - Name - Time - What has been done
 18/02/2022 Anton 1530 - 1630 - mastering to use git and github
 
 21/02/2022 Anton 0830 - 1000 - Trying to get Gloss to work
+21/02/2022 Vidar 1700 - 1800 - learning that gloss is bad
