@@ -5,7 +5,11 @@ import Graphics.Gloss.Data.Color
 import Data.Array
 import Graphics.Gloss.Interface.IO.Game (Event(EventKey), MouseButton (LeftButton))
 import Graphics.Gloss.Interface.Pure.Game
+import System.Random
+import System.IO
 
+--dice
+data Dice = Int deriving Show
 
 --player
 data Player = PlayerRed | PlayerBlue | PlayerYellow | PlayerGreen deriving (Eq, Show)
@@ -18,6 +22,9 @@ data Cell = Empty | Full Player deriving (Eq, Show)
 
 -- board
 type Board = Array (Int, Int) Cell
+
+
+
 
 
 -- this is a "Record" and creates variables for the type Game 
@@ -55,7 +62,31 @@ n = 15
 validPositions = [(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6),(6,6),(6,5),(6,4),(6,3),(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8,6),
                   (9,6),(10,6),(11,6),(12,6),(13,6),(14,6),(14,7),(14,8),(13,8),(12,8),(11,8),(10,8),(9,8),(8,8),(8,9),(8,10),(8,11),(8,12),(8,13),(8,14),
                   (7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9--nice),(6,8),(5,8),(4,8),(3,8),(2,8),(1,8)]
-goalSquare = [(7,7)]                  
+goalSquare = [(7,7)]       
+-- Coordinates for crusial points on board
+{-
+winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
+winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
+winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
+winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
+
+entryPointGreen = (12,6)
+entryPointYellow = (8,12)
+entryPointBlue = (2,8)
+entryPointRed = (6,2)
+-}
+--DICE-----------------DICE-----------------DICE-----------------DICE-----------------DICE---------------
+dice :: Int -> IO[Int]
+dice 0 = return []
+dice n = do
+  r  <- randomRIO (1,6)
+  rs <- dice (n-1)
+  return (r:rs)
+
+diceR1 :: IO[Int] -> Picture
+diceR1 num 
+    | dice n 
+--DICE-----------------DICE-----------------DICE-----------------DICE-----------------DICE----------------           
 
 -}
 {- 
