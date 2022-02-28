@@ -208,22 +208,26 @@ boardGrid = pictures $ concatMap (\i -> [ line [ (i * cellWidth, 0.0),
 redCorner :: Picture
 redCorner = pictures [translate 120 120 (rectangleSolid 240 240),
                       translate 260 60 (rectangleSolid 40 40),
-                      translate 300 160 (rectangleSolid 40 240)]
+                      translate 300 160 (rectangleSolid 40 240),
+                      translate 100 260 (rectangleSolid 40 40)]
 
 blueCorner :: Picture
 blueCorner = pictures [translate 480 120 (rectangleSolid 240 240),
                        translate 540 260 (rectangleSolid 40 40),
-                       translate 440 300 (rectangleSolid 240 40)]
+                       translate 440 300 (rectangleSolid 240 40),
+                       translate 340 100 (rectangleSolid 40 40)]
 
 yellowCorner :: Picture
 yellowCorner = pictures [translate 480 480 (rectangleSolid 240 240),
                          translate 340 540 (rectangleSolid 40 40),
-                         translate 300 440 (rectangleSolid 40 240)]
+                         translate 300 440 (rectangleSolid 40 240),
+                         translate 500 340 (rectangleSolid 40 40)]
 
 greenCorner :: Picture
 greenCorner = pictures [translate 120 480 (rectangleSolid 240 240),
                         translate 60 340 (rectangleSolid 40 40),
-                        translate 160 300 (rectangleSolid 240 40)]
+                        translate 160 300 (rectangleSolid 240 40),
+                        translate 260 500 (rectangleSolid 40 40)]
 
 whiteSquare :: Picture
 whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
