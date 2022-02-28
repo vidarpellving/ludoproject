@@ -16,8 +16,10 @@ data Cell = Empty | Full Player deriving (Eq, Show)
 -- board
 type Board = Array (Int, Int) Cell
 
+
 -- this is a "Record" and creates variables for the type Game 
 -- line 21 is equal, (almost) to data Game = Game Board Player State
+
 data Game = Game { gameBoard :: Board,
                    gamePlayer :: Player,
                    gameState :: State
@@ -140,6 +142,7 @@ yellowCellsOfBoard board = cellsOfBoard board (Full PlayerYellow) yellowCell
 greenCellsOfBoard :: Board -> Picture
 greenCellsOfBoard board = cellsOfBoard board (Full PlayerGreen) greenCell
 
+
 {-
     This function makes all the lines for the grid
     pictures makes takes a list of picture and creates a single picture
@@ -156,6 +159,7 @@ boardGrid = pictures $ concatMap (\i -> [ line [ (i * cellWidth, 0.0),
                                           line [ (0.0, i * cellHeight),
                                                  (fromIntegral screenWidth, i * cellHeight)]])
                                                  [0.0 .. fromIntegral n]
+
 -- Only works when the gameState = GameOver
 redCorner :: Picture
 redCorner = pictures [translate (120) (120) (rectangleSolid 240 240),
