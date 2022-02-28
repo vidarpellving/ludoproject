@@ -64,7 +64,7 @@ validPositions = [(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6),(6,6),(6,5),(6
                   (7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9--nice),(6,8),(5,8),(4,8),(3,8),(2,8),(1,8)]
 goalSquare = [(7,7)]       
 -- Coordinates for crusial points on board
-{-
+
 winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
 winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
 winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
@@ -83,12 +83,26 @@ dice n = do
   rs <- dice (n-1)
   return (r:rs)
 
-diceR1 :: IO[Int] -> Picture
-diceR1 num 
-    | dice n 
---DICE-----------------DICE-----------------DICE-----------------DICE-----------------DICE----------------           
+visualDice1 = undefined
+visualDice2 = undefined
+visualDice3 = undefined
+visualDice4 = undefined
+visualDice5 = undefined
+visualDice6 = undefined
 
+
+
+{-
+diceR :: IO[Int] -> Picture
+diceR num 
+    | dice num == [1] = visualDice1
+    | dice num == [2] = visualDice2
+    | dice num == [3] = visualDice3
+    | dice num == [4] = visualDice4
+    | dice num == [5] = visualDice5
+    | dice num == [6] = visualDice6
 -}
+--DICE-----------------DICE-----------------DICE-----------------DICE-----------------DICE----------------           
 {- 
     this is the startboard
     Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
