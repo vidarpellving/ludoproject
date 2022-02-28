@@ -33,7 +33,7 @@ type Board = Array (Int, Int) Cell
 data Game = Game { gameBoard :: Board,
                    gamePlayer :: Player,
                    gameState :: State
-                 } 
+                 }
 -- Window
 window = InWindow "Ludo" (600, 600) (100,100)
 
@@ -43,7 +43,7 @@ backgroundColor = white
 screenWidth :: Int
 screenWidth = 600
 
-screenHeight :: Int 
+screenHeight :: Int
 screenHeight = 600
 
 cellWidth :: Float
@@ -99,7 +99,7 @@ diceR1 num
     (//) takes an array and a new list to add to it, first it takes a position and then the value, in this case [((0,0), Full PlayerRed)].
 
 -}
-emptyBoard = Game { gameBoard = (array indexRange $ zip (range indexRange) (cycle [Empty])) // [((3,3), Full PlayerRed), 
+emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat Empty)) // [((3,3), Full PlayerRed),
                                                                                                 ((3,2), Full PlayerRed),
                                                                                                 ((2,2), Full PlayerRed),
                                                                                                 ((2,3), Full PlayerRed),
@@ -126,17 +126,17 @@ emptyBoard = Game { gameBoard = (array indexRange $ zip (range indexRange) (cycl
     This function displays the different layers when the game is running
     Determines what layers are on the bottom and on the top.
 -}
-boardAsRunningPicture board = 
-    pictures [ color red $ redCorner,
-               color blue $ blueCorner,
-               color yellow $ yellowCorner,
-               color green $ greenCorner,
-               color white $ whiteSquare,
+boardAsRunningPicture board =
+    pictures [ color red redCorner,
+               color blue blueCorner,
+               color yellow yellowCorner,
+               color green greenCorner,
+               color white whiteSquare,
                color red $ redCellsOfBoard board,
-               color blue $ blueCellsOfBoard board,
+               color blue $ blueCellsOfBoard board,
                color yellow $ yellowCellsOfBoard board,
                color green $ greenCellsOfBoard board,
-               color black $  boardGrid]
+               color black boardGrid]
 
 -- colors for gameover
 outcomeColor (Just PlayerRed) = red
@@ -146,7 +146,7 @@ outcomeColor (Just PlayerGreen) = green
 outcomeColor Nothing = white
 
 -- put the pieces in the cell
-snapPictureToCell picture (row, column) = translate x y picture 
+snapPictureToCell picture (row, column) = translate x y picture
     where x = fromIntegral column * cellWidth + cellWidth * 0.5
           y = fromIntegral row * cellHeight + cellHeight * 0.5
 
@@ -168,9 +168,9 @@ greenCell = thickCircle 1.0 radius
 
 -- the cells of the board
 cellsOfBoard :: Board -> Cell -> Picture -> Picture
-cellsOfBoard board cell cellPicture = pictures 
-    $ map (snapPictureToCell cellPicture . fst) 
-    $ filter (\(_, e) -> e == cell) 
+cellsOfBoard board cell cellPicture = pictures
+    $ map (snapPictureToCell cellPicture . fst)
+    $ filter (\(_, e) -> e == cell)
     $ assocs board
 
 --makes the cells the color of the player
@@ -206,37 +206,37 @@ boardGrid = pictures $ concatMap (\i -> [ line [ (i * cellWidth, 0.0),
 
 -- Only works when the gameState = GameOver
 redCorner :: Picture
-redCorner = pictures [translate (120) (120) (rectangleSolid 240 240),
-                      translate (260) (60) (rectangleSolid 40 40),
-                      translate (300) (160) (rectangleSolid 40 240)]
+redCorner = pictures [translate 120 120 (rectangleSolid 240 240),
+                      translate 260 60 (rectangleSolid 40 40),
+                      translate 300 160 (rectangleSolid 40 240)]
 
 blueCorner :: Picture
-blueCorner = pictures [translate (480) (120) (rectangleSolid 240 240),
-                       translate (540) (260) (rectangleSolid 40 40),
-                       translate (440) (300) (rectangleSolid 240 40)]
+blueCorner = pictures [translate 480 120 (rectangleSolid 240 240),
+                       translate 540 260 (rectangleSolid 40 40),
+                       translate 440 300 (rectangleSolid 240 40)]
 
 yellowCorner :: Picture
-yellowCorner = pictures [translate (480) (480) (rectangleSolid 240 240),
-                         translate (340) (540) (rectangleSolid 40 40),
-                         translate (300) (440) (rectangleSolid 40 240)]
+yellowCorner = pictures [translate 480 480 (rectangleSolid 240 240),
+                         translate 340 540 (rectangleSolid 40 40),
+                         translate 300 440 (rectangleSolid 40 240)]
 
 greenCorner :: Picture
-greenCorner = pictures [translate (120) (480) (rectangleSolid 240 240),
-                        translate (60) (340) (rectangleSolid 40 40),
-                        translate (160) (300) (rectangleSolid 240 40)]
+greenCorner = pictures [translate 120 480 (rectangleSolid 240 240),
+                        translate 60 340 (rectangleSolid 40 40),
+                        translate 160 300 (rectangleSolid 240 40)]
 
 whiteSquare :: Picture
-whiteSquare = pictures [translate (120) (120) (rectangleSolid 160 160),
-                        translate (480) (120) (rectangleSolid 160 160),
-                        translate (120) (480) (rectangleSolid 160 160),
-                        translate (480) (480) (rectangleSolid 160 160)]
+whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
+                        translate 480 120 (rectangleSolid 160 160),
+                        translate 120 480 (rectangleSolid 160 160),
+                        translate 480 480 (rectangleSolid 160 160)]
 
 {- 
     layers for each player and the grid.
     each color has a function for displaying itself
     boardGrid draws the lines for the grid
 -}
-boardAsPicture board = 
+boardAsPicture board =
     pictures [ redCellsOfBoard board,
                blueCellsOfBoard board,
                yellowCellsOfBoard board,
@@ -262,7 +262,7 @@ gameAsPicture :: Game -> Picture
 gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
                                (fromIntegral screenHeight * (-0.5))
                                frame
-   where frame = case gameState game of 
+   where frame = case gameState game of
         -- gameBoard game is a way to get the value of gameBoard from the datatype Game
             Running -> boardAsRunningPicture (gameBoard game)
             GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
@@ -278,20 +278,20 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord == Empty = 
-        playerSwitch $ game { gameBoard = board // [(cellCoord, Full $ player)]} 
-    | otherwise = game 
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty =
+        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player)]}
+    | otherwise = game
     where board = gameBoard game
-          player = gamePlayer game 
+          player = gamePlayer game
 
 mousePosCell :: (Float,Float) -> (Int,Int)
 mousePosCell (x,y) = ( floor ((y + (fromIntegral screenHeight * 0.5)) / cellHeight)
                      , floor ((x + (fromIntegral screenWidth * 0.5)) / cellWidth )
                      )
 
-transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game = 
-    case gameState game of 
-        Running -> playerTurn game $ mousePosCell mousePos 
+transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
+    case gameState game of
+        Running -> playerTurn game $ mousePosCell mousePos
         GameOver _ -> emptyBoard
 transformGame _ game = game
 
