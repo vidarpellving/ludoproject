@@ -7,6 +7,7 @@ import Graphics.Gloss.Interface.IO.Game (Event(EventKey), MouseButton (LeftButto
 import Graphics.Gloss.Interface.Pure.Game
 import System.Random
 import System.IO
+import Data.List
 
 --dice
 data Dice = Int deriving Show
@@ -307,11 +308,19 @@ mousePosCell (x,y) = ( floor ((y + (fromIntegral screenHeight * 0.5)) / cellHeig
                      , floor ((x + (fromIntegral screenWidth * 0.5)) / cellWidth )
                      )
 
+transformGame :: Event -> Game -> Game
 transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
     case gameState game of
         Running -> playerTurn game $ mousePosCell mousePos
         GameOver _ -> emptyBoard
 transformGame _ game = game
+
+rollDice (EventKey Spacebar Up) game = 
+    case gameState game of
+        Running -> floor (head (map (*6) (take 1 (rnd game)))
+        GameOver _ -> emptyBoard
+rollDice _ game = game 
+
 
 main :: IO ()
 main = play window backgroundColor 30 emptyBoard gameAsPicture transformGame (const id)
