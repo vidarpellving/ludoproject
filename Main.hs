@@ -31,8 +31,9 @@ type Board = Array (Int, Int) Cell
 -- line 21 is equal, (almost) to data Game = Game Board Player State
 
 data Game = Game { gameBoard :: Board,
-                   gamePlayer :: Player,
-                   gameState :: State
+                   gamePlayer :: Player, 
+                   gameState :: State,
+                   rnd :: [Float]
                  }
 -- Window
 window = InWindow "Ludo" (600, 600) (100,100)
@@ -75,34 +76,7 @@ entryPointYellow = (8,12)
 entryPointBlue = (2,8)
 entryPointRed = (6,2)
 -}
---DICE-----------------DICE-----------------DICE-----------------DICE-----------------DICE---------------
-dice :: Int -> IO[Int]
-dice 0 = return []
-dice n = do
-  r  <- randomRIO (1,6)
-  rs <- dice (n-1)
-  return (r:rs)
-
-visualDice1 = undefined
-visualDice2 = undefined
-visualDice3 = undefined
-visualDice4 = undefined
-visualDice5 = undefined
-visualDice6 = undefined
-
-
-
-{-
-diceR :: IO[Int] -> Picture
-diceR num 
-    | dice num == [1] = visualDice1
-    | dice num == [2] = visualDice2
-    | dice num == [3] = visualDice3
-    | dice num == [4] = visualDice4
-    | dice num == [5] = visualDice5
-    | dice num == [6] = visualDice6
--}
---DICE-----------------DICE-----------------DICE-----------------DICE-----------------DICE----------------           
+  
 {- 
     this is the startboard
     Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
@@ -131,7 +105,8 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((11,3), Full PlayerGreen),
                                                                                                 ((1,6), Full PlayerRed)],
                     gamePlayer = PlayerRed,
-                    gameState = Running
+                    gameState = Running,
+                    rnd = randoms (mkStdGen 42)
                   }
             -- This is used to define how large the array created will be
             where indexRange = ((0,0), (n-1, n-1))
@@ -248,6 +223,14 @@ whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
                         translate 480 120 (rectangleSolid 160 160),
                         translate 120 480 (rectangleSolid 160 160),
                         translate 480 480 (rectangleSolid 160 160)]
+
+------------ DICE --------
+-- visualDice1 = text "RANDOM"
+-- visualDice2 = text "2"
+-- visualDice3 = text "3"
+-- visualDice4 = text "4"
+-- visualDice5 = undefined
+-- visualDice6 = undefined
 
 {- 
     layers for each player and the grid.
