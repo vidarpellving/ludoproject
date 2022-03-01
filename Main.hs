@@ -74,7 +74,7 @@ entryPointRed = (6,2)
 entryPointGreen = (12,6)
 entryPointYellow = (8,12)
 entryPointBlue = (2,8)
-entryPointRed = (6,2)
+
 {- 
     this is the startboard
     Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
@@ -102,7 +102,7 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((11,2), Full PlayerGreen),
                                                                                                 ((11,3), Full PlayerGreen),
                                                                                                 ((1,6), Full PlayerRed),
-                                                                                                ((6,2), Full PlayerBlue)],
+                                                                                                (entryPointRed, Full PlayerBlue)],
                     gamePlayer = PlayerRed,
                     gameState = Running,
                     rnd = randoms (mkStdGen 42)
@@ -128,7 +128,9 @@ boardAsRunningPicture board =
                color blue $ blueCellsOfBoard board,
                color yellow $ yellowCellsOfBoard board,
                color green $ greenCellsOfBoard board,
-               color black boardGrid]
+               color black $ visualDiceBG,
+               color black boardGrid,
+               color white $ diceValue6]
 
 -- colors for gameover
 outcomeColor (Just PlayerRed) = red
@@ -228,13 +230,39 @@ whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
                         translate 480 480 (rectangleSolid 160 160)]
 
 ------------ DICE --------
--- visualDice1 = text "RANDOM"
--- visualDice2 = text "2"
--- visualDice3 = text "3"
--- visualDice4 = text "4"
--- visualDice5 = undefined
--- visualDice6 = undefined
+visualDiceBG :: Picture
+visualDiceBG = pictures [translate 200 400 (rectangleSolid 80 80)]
+diceValue1 :: Picture
+diceValue1 = pictures [translate 200 400 (thickCircle 5 10)]
+diceValue2 :: Picture
+diceValue2 = pictures [translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10)
+                      ]
+diceValue3 :: Picture
+diceValue3 = pictures [translate 200 400 (thickCircle 5 10),
+                       translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10)]
+diceValue4 :: Picture
+diceValue4 = pictures [translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10),
+                       translate 180 420 (thickCircle 5 10),
+                       translate 220 380 (thickCircle 5 10)]
 
+
+diceValue5 :: Picture
+diceValue5 = pictures [translate 200 400 (thickCircle 5 10),
+                       translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10),
+                       translate 180 420 (thickCircle 5 10),
+                       translate 220 380 (thickCircle 5 10)]
+diceValue6 :: Picture
+diceValue6 = pictures [translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10),
+                       translate 180 420 (thickCircle 5 10),
+                       translate 220 380 (thickCircle 5 10),
+                       translate 180 400 (thickCircle 5 10),
+                       translate 220 400 (thickCircle 5 10)
+                       ]
 {- 
     layers for each player and the grid.
     each color has a function for displaying itself
@@ -271,8 +299,7 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
             Running -> boardAsRunningPicture (gameBoard game)
             GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
 
-isCoordCorrect = inRange ((0, 0), (n-1,n-1))
-
+isCoordCorrect = inRange ((0,0),(n-1,n-1))
 playerSwitch game =
     case gamePlayer game of
         PlayerRed -> game {gamePlayer = PlayerGreen}
@@ -282,8 +309,8 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord == Full player =
-        playerSwitch $ game { gameBoard = board // [(cellCoord, Empty)]}
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty =
+        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player)]}
     | otherwise = game
     where board = gameBoard game
           player = gamePlayer game
@@ -300,12 +327,12 @@ transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
         GameOver _ -> emptyBoard
 transformGame _ game = game
 
-
-rollDice (EventKey Spacebar Up) game = 
-    case gameState game of
-        Running -> floor (head (map (*6) (take 1 (rnd game)))
-        GameOver _ -> emptyBoard
-rollDice _ game = game 
+-- rollDice :: Event -> Game -> Game 
+-- rollDice (EventKey KeySpace Up) game = 
+--     case gameState game of
+--         Running -> floor  head (map (*6) (take 1 (rnd game))
+--         GameOver _ -> emptyBoard
+-- rollDice _ game = game 
 
 
 main :: IO ()
