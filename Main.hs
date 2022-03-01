@@ -10,7 +10,7 @@ import System.IO
 import Data.List
 
 --dice
-data Dice = Int deriving Show
+--data Dice = Int deriving Show
 
 --player
 data Player = PlayerRed | PlayerBlue | PlayerYellow | PlayerGreen deriving (Eq, Show)
@@ -23,10 +23,6 @@ data Cell = Empty | Full Player deriving (Eq, Show)
 
 -- board
 type Board = Array (Int, Int) Cell
-
-
-
-
 
 -- this is a "Record" and creates variables for the type Game 
 -- line 21 is equal, (almost) to data Game = Game Board Player State
@@ -58,26 +54,27 @@ cellHeight = fromIntegral screenHeight / fromIntegral n
 n :: Int
 n = 15
 
-{- this is the startboard-}
+--Coordinates and curcial points; validPositions, goalSquare, winColor, entryPoint
+--Total 56 possible positions before winColorRow(which contains 7 positions.)
+validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8,6),(9,6),(10,6),(11,6),
+                  (12,6),(13,6),(14,6),(14,7),(14,8),(13,8),(12,8),(11,8),(10,8),(9,8),(8,8),(8,9),(8,10),(8,11),
+                  (8,12),(8,13),(8,14),(7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9),(6,8),(5,8),(4,8),(3,8),
+                  (2,8),(1,8),(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6),(6,6),(6,5),(6,4),(6,3)]
 
-{-
-validPositions = [(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6),(6,6),(6,5),(6,4),(6,3),(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8,6),
-                  (9,6),(10,6),(11,6),(12,6),(13,6),(14,6),(14,7),(14,8),(13,8),(12,8),(11,8),(10,8),(9,8),(8,8),(8,9),(8,10),(8,11),(8,12),(8,13),(8,14),
-                  (7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9--nice),(6,8),(5,8),(4,8),(3,8),(2,8),(1,8)]
+
+
 goalSquare = [(7,7)]       
--- Coordinates for crusial points on board
 
 winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
 winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
 winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
 winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 
+entryPointRed = (6,2)    
 entryPointGreen = (12,6)
 entryPointYellow = (8,12)
 entryPointBlue = (2,8)
 entryPointRed = (6,2)
--}
-  
 {- 
     this is the startboard
     Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
@@ -104,7 +101,8 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((12,3), Full PlayerGreen),
                                                                                                 ((11,2), Full PlayerGreen),
                                                                                                 ((11,3), Full PlayerGreen),
-                                                                                                ((1,6), Full PlayerRed)],
+                                                                                                ((1,6), Full PlayerRed),
+                                                                                                ((6,2), Full PlayerBlue)],
                     gamePlayer = PlayerRed,
                     gameState = Running,
                     rnd = randoms (mkStdGen 42)
@@ -116,6 +114,10 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
     This function displays the different layers when the game is running
     Determines what layers are on the bottom and on the top.
 -}
+
+
+
+
 boardAsRunningPicture board =
     pictures [ color red redCorner,
                color blue blueCorner,
@@ -280,8 +282,8 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord == Empty =
-        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player)]}
+    | isCoordCorrect cellCoord && board ! cellCoord == Full player =
+        playerSwitch $ game { gameBoard = board // [(cellCoord, Empty)]}
     | otherwise = game
     where board = gameBoard game
           player = gamePlayer game
@@ -297,6 +299,7 @@ transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
         Running -> playerTurn game $ mousePosCell mousePos
         GameOver _ -> emptyBoard
 transformGame _ game = game
+
 
 rollDice (EventKey Spacebar Up) game = 
     case gameState game of
