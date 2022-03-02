@@ -22,6 +22,8 @@ data State = Running | GameOver (Maybe Player)
 -- if a cell is filled with a character or not
 data Cell = Empty | Full Player deriving (Eq, Show)
 
+data Dice = Void | Dice Int deriving (Eq, Show)
+
 -- board
 type Board = Array (Int, Int) Cell
 
@@ -31,7 +33,8 @@ type Board = Array (Int, Int) Cell
 data Game = Game { gameBoard :: Board,
                    gamePlayer :: Player, 
                    gameState :: State,
-                   rnd :: [Float]
+                   rnd :: [Float],
+                   dice :: Dice
                  }
 -- Window
 window = InWindow "Ludo" (600, 600) (100,100)
@@ -57,6 +60,7 @@ n = 15
 
 --Coordinates and curcial points; validPositions, goalSquare, winColor, entryPoint
 --Total 56 possible positions before winColorRow(which contains 7 positions.)
+validPositions :: [(Int,Int)]
 validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8,6),(9,6),(10,6),(11,6),
                   (12,6),(13,6),(14,6),(14,7),(14,8),(13,8),(12,8),(11,8),(10,8),(9,8),(8,8),(8,9),(8,10),(8,11),
                   (8,12),(8,13),(8,14),(7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9),(6,8),(5,8),(4,8),(3,8),
@@ -74,6 +78,7 @@ winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 
 entryPoints = [(Full PlayerRed,(6,2)),(Full PlayerGreen,(12,6)),(Full PlayerYellow,(8,12)),(Full PlayerBlue,(2,8))]
 
+getPlayerStart _ [] = (0,0)
 getPlayerStart player ((x,y):xs) | player == fst x = y
                                  | otherwise = getPlayerStart player xs
 {- 
@@ -107,7 +112,8 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
 
                     gamePlayer = PlayerRed,
                     gameState = Running,
-                    rnd = randoms (mkStdGen 42)
+                    rnd = randoms (mkStdGen 42),
+                    dice = Dice 1
                   }
             -- This is used to define how large the array created will be
             where indexRange = ((0,0), (n-1, n-1))
@@ -117,16 +123,22 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
     Determines what layers are on the bottom and on the top.
 -}
 
+diceGen :: Dice -> Picture
+diceGen Void = visualDiceBG
+diceGen dice | dice == Dice 1 = diceValue1
+             | dice == Dice 2 = diceValue2
+             | dice == Dice 3 = diceValue3
+             | dice == Dice 4 = diceValue4
+             | dice == Dice 5 = diceValue5
+             | dice == Dice 6 = diceValue6
 
-
-
-boardAsRunningPicture board =
+boardAsRunningPicture :: Board -> Dice -> Picture
+boardAsRunningPicture board dice =
     pictures [ color red redCorner,
                color blue blueCorner,
                color yellow yellowCorner,
                color green greenCorner,
                color white whiteSquare,
-
                redBoarder board,
                blueBoarder board,
                yellowBoarder board,
@@ -135,7 +147,9 @@ boardAsRunningPicture board =
                blueCellsOfBoard board,
                yellowCellsOfBoard board,
                greenCellsOfBoard board,
-               color black boardGrid]
+               color black visualDiceBG,
+               color black boardGrid,
+               color white $ diceGen dice]
 
 -- colors for gameover
 outcomeColor (Just PlayerRed) = red
@@ -312,12 +326,12 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
                                frame
    where frame = case gameState game of
         -- gameBoard game is a way to get the value of gameBoard from the datatype Game
-            Running -> boardAsRunningPicture (gameBoard game)
-            GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
+            Running -> boardAsRunningPicture (gameBoard game) (dice game)
+            GameOver winner -> boardAsGameOverPicture winner (gameBoard game) 
 
 
 rndNumGen :: [Float] -> Int
-rndNumGen rnd = floor (6*head rnd)
+rndNumGen rnd = truncate (head rnd*6+1)
 
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
@@ -330,8 +344,10 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord == Empty =
-        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player)]}
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord validPositions =
+        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player)],
+                              rnd = drop 1 (rnd game),
+                              dice = Dice (rndNumGen (rnd game))}
 
     | otherwise = game
     where board = gameBoard game
