@@ -71,11 +71,17 @@ winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
 winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
 winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 
+entryPointRed = (6,2)    
+entryPointGreen = (12,6)
+entryPointYellow = (8,12)
+entryPointBlue = (2,8)
+
 
 entryPoints = [(Full PlayerRed,(6,2)),(Full PlayerGreen,(12,6)),(Full PlayerYellow,(8,12)),(Full PlayerBlue,(2,8))]
 
 getPlayerStart player ((x,y):xs) | player == fst x = y
                                  | otherwise = getPlayerStart player xs
+
 {- 
     this is the startboard
     Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
@@ -86,6 +92,21 @@ getPlayerStart player ((x,y):xs) | player == fst x = y
     (//) takes an array and a new list to add to it, first it takes a position and then the value, in this case [((0,0), Full PlayerRed)].
 
 -}
+
+-- insertPlayer2List :: Game -> (Int,Int) -> [(Int,Int)]
+-- insertPlayer2List 
+
+-- move :: Game -> (Int, Int) -> Game
+-- move game cellCoord
+--     | isCoordCorrect cellCoord && board ! cellCoord == Full player =
+--         playerSwitch $ game { gameBoard = board // [(cellCoord, Empty)]}
+--     | otherwise = game
+--     where board = gameBoard game
+--           player = gamePlayer game
+
+-- move1 :: Game -> (Int, Int) -> Game
+-- move1 
+
 emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat Empty)) // [((3,3), Full PlayerRed),
                                                                                                 ((3,2), Full PlayerRed),
                                                                                                 ((2,2), Full PlayerRed),
@@ -103,7 +124,11 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((11,2), Full PlayerGreen),
                                                                                                 ((11,3), Full PlayerGreen),
                                                                                                 ((1,6), Full PlayerRed),
+
+
+                                                                                                ((6,2), Full PlayerBlue)],
                                                                                                 ((6,13), Full PlayerBlue)],
+
 
                     gamePlayer = PlayerRed,
                     gameState = Running,
@@ -315,11 +340,13 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
             Running -> boardAsRunningPicture (gameBoard game)
             GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
 
+isCoordCorrect = (inRange ((0, 0), (n-1,n-1))) --------------------
 
 rndNumGen :: [Float] -> Int
 rndNumGen rnd = floor (6*head rnd)
 
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
+
 
 playerSwitch game =
     case gamePlayer game of
@@ -348,6 +375,18 @@ transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
         Running -> playerTurn game $ mousePosCell mousePos
         GameOver _ -> emptyBoard
 transformGame _ game = game
+
+
+
+
+{-
+rollDice (EventKey Spacebar Up) game = 
+    case gameState game of
+        Running -> floor (head (map (*6) (take 1 (rnd game)))
+        GameOver _ -> emptyBoard
+rollDice _ game = game 0
+-}
+
 
 
 main :: IO ()
