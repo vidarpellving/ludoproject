@@ -74,7 +74,6 @@ entryPointRed = (6,2)
 entryPointGreen = (12,6)
 entryPointYellow = (8,12)
 entryPointBlue = (2,8)
-entryPointRed = (6,2)
 {- 
     this is the startboard
     Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
@@ -85,6 +84,21 @@ entryPointRed = (6,2)
     (//) takes an array and a new list to add to it, first it takes a position and then the value, in this case [((0,0), Full PlayerRed)].
 
 -}
+
+-- insertPlayer2List :: Game -> (Int,Int) -> [(Int,Int)]
+-- insertPlayer2List 
+
+-- move :: Game -> (Int, Int) -> Game
+-- move game cellCoord
+--     | isCoordCorrect cellCoord && board ! cellCoord == Full player =
+--         playerSwitch $ game { gameBoard = board // [(cellCoord, Empty)]}
+--     | otherwise = game
+--     where board = gameBoard game
+--           player = gamePlayer game
+
+-- move1 :: Game -> (Int, Int) -> Game
+-- move1 
+
 emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat Empty)) // [((3,3), Full PlayerRed),
                                                                                                 ((3,2), Full PlayerRed),
                                                                                                 ((2,2), Full PlayerRed),
@@ -102,6 +116,7 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((11,2), Full PlayerGreen),
                                                                                                 ((11,3), Full PlayerGreen),
                                                                                                 ((1,6), Full PlayerRed),
+
                                                                                                 ((6,2), Full PlayerBlue)],
                     gamePlayer = PlayerRed,
                     gameState = Running,
@@ -271,7 +286,8 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
             Running -> boardAsRunningPicture (gameBoard game)
             GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
 
-isCoordCorrect = inRange ((0, 0), (n-1,n-1))
+isCoordCorrect = (inRange ((0, 0), (n-1,n-1))) --------------------
+
 
 playerSwitch game =
     case gamePlayer game of
@@ -301,12 +317,14 @@ transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
 transformGame _ game = game
 
 
+
+{-
 rollDice (EventKey Spacebar Up) game = 
     case gameState game of
         Running -> floor (head (map (*6) (take 1 (rnd game)))
         GameOver _ -> emptyBoard
-rollDice _ game = game 
-
+rollDice _ game = game 0
+-}
 
 main :: IO ()
 main = play window backgroundColor 30 emptyBoard gameAsPicture transformGame (const id)
