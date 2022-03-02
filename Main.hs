@@ -8,6 +8,7 @@ import Graphics.Gloss.Interface.Pure.Game
 import System.Random
 import System.IO
 import Data.List
+import Data.Time
 
 --dice
 --data Dice = Int deriving Show
@@ -74,6 +75,13 @@ entryPointRed = (6,2)
 entryPointGreen = (12,6)
 entryPointYellow = (8,12)
 entryPointBlue = (2,8)
+
+
+entryPoints = [(Full PlayerRed,(6,2)),(Full PlayerGreen,(12,6)),(Full PlayerYellow,(8,12)),(Full PlayerBlue,(2,8))]
+
+getPlayerStart player ((x,y):xs) | player == fst x = y
+                                 | otherwise = getPlayerStart player xs
+
 {- 
     this is the startboard
     Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
@@ -117,7 +125,11 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((11,3), Full PlayerGreen),
                                                                                                 ((1,6), Full PlayerRed),
 
+
                                                                                                 ((6,2), Full PlayerBlue)],
+                                                                                                ((6,13), Full PlayerBlue)],
+
+
                     gamePlayer = PlayerRed,
                     gameState = Running,
                     rnd = randoms (mkStdGen 42)
@@ -139,10 +151,15 @@ boardAsRunningPicture board =
                color yellow yellowCorner,
                color green greenCorner,
                color white whiteSquare,
-               color red $ redCellsOfBoard board,
-               color blue $ blueCellsOfBoard board,
-               color yellow $ yellowCellsOfBoard board,
-               color green $ greenCellsOfBoard board,
+
+               redBoarder board,
+               blueBoarder board,
+               yellowBoarder board,
+               greenBoarder board,
+               redCellsOfBoard board,
+               blueCellsOfBoard board,
+               yellowCellsOfBoard board,
+               greenCellsOfBoard board,
                color black boardGrid]
 
 -- colors for gameover
@@ -158,20 +175,24 @@ snapPictureToCell picture (row, column) = translate x y picture
           y = fromIntegral row * cellHeight + cellHeight * 0.5
 
 redCell :: Picture
-redCell = thickCircle 1.0 radius
+redCell = color red $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 blueCell :: Picture
-blueCell = thickCircle 1.0 radius
+blueCell = color blue $ thickCircle 1 radius
     where radius = min cellWidth cellHeight * 0.75
 
 yellowCell :: Picture
-yellowCell = thickCircle 1.0 radius
+yellowCell = color yellow $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 greenCell :: Picture
-greenCell = thickCircle 1.0 radius
+greenCell = color green $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
+
+boarderCell :: Picture
+boarderCell = color black $ thickCircle 1.0 radius
+    where radius = min cellWidth cellHeight * 0.81
 
 -- the cells of the board
 cellsOfBoard :: Board -> Cell -> Picture -> Picture
@@ -183,16 +204,23 @@ cellsOfBoard board cell cellPicture = pictures
 --makes the cells the color of the player
 redCellsOfBoard :: Board -> Picture
 redCellsOfBoard board = cellsOfBoard board (Full PlayerRed) redCell
+redBoarder :: Board -> Picture
+redBoarder board = cellsOfBoard board (Full PlayerRed) boarderCell
 
 blueCellsOfBoard :: Board -> Picture
 blueCellsOfBoard board = cellsOfBoard board (Full PlayerBlue) blueCell
+blueBoarder :: Board -> Picture
+blueBoarder board = cellsOfBoard board (Full PlayerBlue) boarderCell
 
 yellowCellsOfBoard :: Board -> Picture
 yellowCellsOfBoard board = cellsOfBoard board (Full PlayerYellow) yellowCell
+yellowBoarder :: Board -> Picture
+yellowBoarder board = cellsOfBoard board (Full PlayerYellow) boarderCell
 
 greenCellsOfBoard :: Board -> Picture
 greenCellsOfBoard board = cellsOfBoard board (Full PlayerGreen) greenCell
-
+greenBoarder :: Board -> Picture
+greenBoarder board = cellsOfBoard board (Full PlayerGreen) boarderCell
 
 {-
     This function makes all the lines for the grid
@@ -243,13 +271,39 @@ whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
                         translate 480 480 (rectangleSolid 160 160)]
 
 ------------ DICE --------
--- visualDice1 = text "RANDOM"
--- visualDice2 = text "2"
--- visualDice3 = text "3"
--- visualDice4 = text "4"
--- visualDice5 = undefined
--- visualDice6 = undefined
+visualDiceBG :: Picture
+visualDiceBG = pictures [translate 200 400 (rectangleSolid 80 80)]
+diceValue1 :: Picture
+diceValue1 = pictures [translate 200 400 (thickCircle 5 10)]
+diceValue2 :: Picture
+diceValue2 = pictures [translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10)
+                      ]
+diceValue3 :: Picture
+diceValue3 = pictures [translate 200 400 (thickCircle 5 10),
+                       translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10)]
+diceValue4 :: Picture
+diceValue4 = pictures [translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10),
+                       translate 180 420 (thickCircle 5 10),
+                       translate 220 380 (thickCircle 5 10)]
 
+
+diceValue5 :: Picture
+diceValue5 = pictures [translate 200 400 (thickCircle 5 10),
+                       translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10),
+                       translate 180 420 (thickCircle 5 10),
+                       translate 220 380 (thickCircle 5 10)]
+diceValue6 :: Picture
+diceValue6 = pictures [translate 180 380 (thickCircle 5 10),
+                       translate 220 420 (thickCircle 5 10),
+                       translate 180 420 (thickCircle 5 10),
+                       translate 220 380 (thickCircle 5 10),
+                       translate 180 400 (thickCircle 5 10),
+                       translate 220 400 (thickCircle 5 10)
+                       ]
 {- 
     layers for each player and the grid.
     each color has a function for displaying itself
@@ -288,6 +342,11 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
 
 isCoordCorrect = (inRange ((0, 0), (n-1,n-1))) --------------------
 
+rndNumGen :: [Float] -> Int
+rndNumGen rnd = floor (6*head rnd)
+
+isCoordCorrect = inRange ((0,0),(n-1,n-1))
+
 
 playerSwitch game =
     case gamePlayer game of
@@ -298,8 +357,9 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord == Full player =
-        playerSwitch $ game { gameBoard = board // [(cellCoord, Empty)]}
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty =
+        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player)]}
+
     | otherwise = game
     where board = gameBoard game
           player = gamePlayer game
@@ -318,6 +378,7 @@ transformGame _ game = game
 
 
 
+
 {-
 rollDice (EventKey Spacebar Up) game = 
     case gameState game of
@@ -325,6 +386,8 @@ rollDice (EventKey Spacebar Up) game =
         GameOver _ -> emptyBoard
 rollDice _ game = game 0
 -}
+
+
 
 main :: IO ()
 main = play window backgroundColor 30 emptyBoard gameAsPicture transformGame (const id)
