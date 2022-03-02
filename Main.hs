@@ -135,7 +135,7 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                     gamePlayer = PlayerRed,
                     gameState = Running,
                     rnd = randoms (mkStdGen 42),
-                    dice = Dice 1
+                    dice = Void
                   }
             -- This is used to define how large the array created will be
             where indexRange = ((0,0), (n-1, n-1))
@@ -146,13 +146,14 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
 -}
 
 diceGen :: Dice -> Picture
-diceGen Void = visualDiceBG
-diceGen dice | dice == Dice 1 = diceValue1
-             | dice == Dice 2 = diceValue2
-             | dice == Dice 3 = diceValue3
-             | dice == Dice 4 = diceValue4
-             | dice == Dice 5 = diceValue5
-             | dice == Dice 6 = diceValue6
+diceGen Void = color black visualDiceBG
+diceGen dice | dice == Dice 1 = color white diceValue1
+             | dice == Dice 2 = color white diceValue2
+             | dice == Dice 3 = color white diceValue3
+             | dice == Dice 4 = color white diceValue4
+             | dice == Dice 5 = color white diceValue5
+             | dice == Dice 6 = color white diceValue6
+             | otherwise = color black visualDiceBG
 
 boardAsRunningPicture :: Board -> Dice -> Picture
 boardAsRunningPicture board dice =
@@ -171,7 +172,7 @@ boardAsRunningPicture board dice =
                greenCellsOfBoard board,
                color black visualDiceBG,
                color black boardGrid,
-               color white $ diceGen dice]
+               diceGen dice]
 
 -- colors for gameover
 outcomeColor (Just PlayerRed) = red
@@ -387,18 +388,14 @@ transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
         GameOver _ -> emptyBoard
 transformGame _ game = game
 
-
-
-
-{-
-rollDice (EventKey Spacebar Up) game = 
-    case gameState game of
-        Running -> floor (head (map (*6) (take 1 (rnd game)))
-        GameOver _ -> emptyBoard
-rollDice _ game = game 0
--}
-
+timeGen :: IO Int
+timeGen = do
+   currTime <- getCurrentTime
+   let time = floor $ utctDayTime currTime :: Int
+   return time
 
 
 main :: IO ()
-main = play window backgroundColor 30 emptyBoard gameAsPicture transformGame (const id)
+main = do
+    time <- timeGen
+    play window backgroundColor 30 (emptyBoard {rnd = randoms (mkStdGen time)}) gameAsPicture transformGame (const id)
