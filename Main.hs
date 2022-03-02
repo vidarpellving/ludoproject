@@ -10,9 +10,6 @@ import System.IO
 import Data.List
 import Data.Time
 
---dice
---data Dice = Int deriving Show
-
 --player
 data Player = PlayerRed | PlayerBlue | PlayerYellow | PlayerGreen deriving (Eq, Show)
 
@@ -109,8 +106,11 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((12,3), Full PlayerGreen),
                                                                                                 ((11,2), Full PlayerGreen),
                                                                                                 ((11,3), Full PlayerGreen),
+                                                                                                
                                                                                                 ((1,6), Full PlayerRed),
+                                                                                                ((6,2), Full PlayerBlue),
                                                                                                 ((6,13), Full PlayerBlue)],
+
 
                     gamePlayer = PlayerRed,
                     gameState = Running,
@@ -334,9 +334,30 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
 
 
 rndNumGen :: [Float] -> Int
-rndNumGen rnd = truncate (head rnd*6+1)
+rndNumGen rnd = truncate (head rnd*6+1)
 
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
+
+
+    --findPlayersPos (assocs(gameBoard emptyBoard))
+    {-EXAMPLE: findPlayersPos (assocs(gameBoard emptyBoard)) == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),
+                                                                ((2,11),Full PlayerBlue),((2,12),Full PlayerBlue),((3,2),Full PlayerRed),
+                                                                ((3,3),Full PlayerRed),((3,11),Full PlayerBlue),((3,12),Full PlayerBlue),
+                                                                ((6,2),Full PlayerBlue),((11,2),Full PlayerGreen),((11,3),Full PlayerGreen),
+                                                                ((11,11),Full PlayerYellow),((11,12),Full PlayerYellow),((12,2),Full PlayerGreen),
+                                                                ((12,3),Full PlayerGreen),((12,11),Full PlayerYellow),((12,12),Full PlayerYellow)]
+    -}
+findPlayersPos :: [((Int,Int), Cell)] -> [((Int,Int), Cell)]
+findPlayersPos [] = []
+findPlayersPos array@((x,y):xs)
+    | y == Full PlayerRed = (x,Full PlayerRed) : findPlayersPos xs
+    | y == Full PlayerGreen = (x,Full PlayerGreen) : findPlayersPos xs
+    | y == Full PlayerYellow = (x,Full PlayerYellow) : findPlayersPos xs
+    | y == Full PlayerBlue = (x,Full PlayerBlue) : findPlayersPos xs
+findPlayersPos (((_,_), Empty):xs) = findPlayersPos xs
+
+movePlayer :: Board -> Int -> Game
+movePlayer = undefined
 
 playerSwitch game =
     case gamePlayer game of
