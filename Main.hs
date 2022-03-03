@@ -28,7 +28,7 @@ type Board = Array (Int, Int) Cell
 -- line 21 is equal, (almost) to data Game = Game Board Player State
 
 data Game = Game { gameBoard :: Board,
-                   gamePlayer :: Player, 
+                   gamePlayer :: Player,
                    gameState :: State,
                    rnd :: [Float],
                    dice :: Dice
@@ -65,12 +65,16 @@ validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8
 
 
 
+
+goalSquare = [(7,7)]
+
 goalSquare = [(7,7)]       
 -- spawnpoints for all the colors
 redSpawn = [(2,2),(3,2),(3,3),(2,3)]
 blueSpawn = [(2,11),(3,11),(3,12),(2,12)]
 greenSpawn = [(11,2),(12,2),(12,3),(11,3)]
 yellowSpawn = [(11,11),(12,11),(12,12),(11,12)]
+
 
 -- the squares that are limited to their colors
 winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
@@ -111,7 +115,14 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((12,2), Full PlayerGreen),
                                                                                                 ((12,3), Full PlayerGreen),
                                                                                                 ((11,2), Full PlayerGreen),
+
+                                                                                                ((11,3), Full PlayerGreen),
+
+                                                                                                ((1,6), Full PlayerRed),
+                                                                                                ((6,2), Full PlayerBlue),
+                                                                                                ((6,13), Full PlayerBlue)],
                                                                                                 ((11,3), Full PlayerGreen)],
+
 
                     gamePlayer = PlayerRed,
                     gameState = Running,
@@ -168,23 +179,23 @@ snapPictureToCell picture (row, column) = translate x y picture
           y = fromIntegral row * cellHeight + cellHeight * 0.5
 
 redCell :: Picture
-redCell = color red $ thickCircle 1.0 radius
+redCell = color red $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 blueCell :: Picture
-blueCell = color blue $ thickCircle 1 radius
+blueCell = color blue $ thickCircle 1 radius
     where radius = min cellWidth cellHeight * 0.75
 
 yellowCell :: Picture
-yellowCell = color yellow $ thickCircle 1.0 radius
+yellowCell = color yellow $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 greenCell :: Picture
-greenCell = color green $ thickCircle 1.0 radius
+greenCell = color green $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 boarderCell :: Picture
-boarderCell = color black $ thickCircle 1.0 radius
+boarderCell = color black $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.81
 
 -- the cells of the board
@@ -266,6 +277,7 @@ whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
 ------------ DICE --------
 visualDiceBG :: Picture
 visualDiceBG = pictures [translate 200 400 (rectangleSolid 80 80)]
+
 diceValue1 :: Picture
 diceValue1 = pictures [translate 200 400 (thickCircle 5 10)]
 diceValue2 :: Picture
@@ -331,7 +343,7 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
    where frame = case gameState game of
         -- gameBoard game is a way to get the value of gameBoard from the datatype Game
             Running -> boardAsRunningPicture (gameBoard game) (dice game)
-            GameOver winner -> boardAsGameOverPicture winner (gameBoard game) 
+            GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
 
 
 rndNumGen :: [Float] -> Int
@@ -341,6 +353,11 @@ isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
 
 
+{- findPlayersPos (assocs(gameBoard emptyBoard))
+
+    RETURNS : list of players of desired color
+    EXAMPLE : findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)]
+-}
     --findPlayersPos (assocs(gameBoard emptyBoard))
     {-EXAMPLE: findPlayersPos (assocs(gameBoard emptyBoard)) == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),
                                                                 ((2,11),Full PlayerBlue),((2,12),Full PlayerBlue),((3,2),Full PlayerRed),
@@ -355,6 +372,32 @@ findPlayersPos (((_,_), Empty):xs) player = findPlayersPos xs player
 findPlayersPos array@((x,y):xs) player
     | y == Full player = (x,Full player) : findPlayersPos xs player
     | otherwise = findPlayersPos xs player
+
+{- movePlayer validPts point
+    Moves a player(of selected color) from its current position to a position 1-6 cells forward.
+    PRE      :
+    RETURNS  : 
+    EXAMPLES :
+-}
+--movePlayer
+
+{- getNextPos lst point
+    Gives the next possible position from a given point on the board
+    RETURNS  :
+    EXAMPLES :  movePlayer validPositions (12,6) == (13,6)
+                movePlayer validPositions (14,6) == (14,7)
+-}
+getNexPos :: [a] -> (Int, Int) -> (Int, Int)
+getNexPos validPts@(x:xs) point = validPositions !! (fromJust (elemIndex point validPositions) +1)
+
+{- fromJust a
+    Translates and integer of type Maybe to only a Integer
+    RETURNS  : a single number
+    EXAMPLES : fromJust (Just 7) == 7
+-}
+fromJust :: Maybe a -> a
+fromJust Nothing = error "Maybe.fromJust: Nothing"
+fromJust (Just x) = x
 
 spawnPoint :: [((Int,Int), Cell)] -> Player -> ((Int,Int),Cell)
 spawnPoint [] _ = ((7,7),Empty)
