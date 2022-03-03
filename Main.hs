@@ -71,9 +71,7 @@ validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8
 dicePos = [(9,4),(9,5),(10,4),(10,5)]
 
 
-goalSquare = [(7,7)]
-
-goalSquare = [(7,7)]       
+goalSquare = [(7,7)]      
 -- spawnpoints for all the colors
 redSpawn = [(2,2),(3,2),(3,3),(2,3)]
 blueSpawn = [(2,11),(3,11),(3,12),(2,12)]
@@ -122,12 +120,6 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((12,2), Full PlayerGreen),
                                                                                                 ((12,3), Full PlayerGreen),
                                                                                                 ((11,2), Full PlayerGreen),
-
-                                                                                                ((11,3), Full PlayerGreen),
-
-                                                                                                ((1,6), Full PlayerRed),
-                                                                                                ((6,2), Full PlayerBlue),
-                                                                                                ((6,13), Full PlayerBlue)],
                                                                                                 ((11,3), Full PlayerGreen)],
 
 
