@@ -21,6 +21,8 @@ data Cell = Empty | Full Player deriving (Eq, Show)
 
 data Dice = Void | Dice Int deriving (Eq, Show)
 
+data Move = None | Piece (Int, Int) deriving (Eq, Show)
+
 -- board
 type Board = Array (Int, Int) Cell
 
@@ -31,7 +33,9 @@ data Game = Game { gameBoard :: Board,
                    gamePlayer :: Player, 
                    gameState :: State,
                    rnd :: [Float],
-                   dice :: Dice
+                   dice :: Dice,
+                   diceUpdate :: Bool,
+                   pieceMove :: Move
                  }
 -- Window
 window = InWindow "Ludo" (600, 600) (100,100)
@@ -63,7 +67,8 @@ validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8
                   (8,12),(8,13),(8,14),(7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9),(6,8),(5,8),(4,8),(3,8),
                   (2,8),(1,8),(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6),(6,6),(6,5),(6,4),(6,3)]
 
-
+--dice position
+dicePos = [(9,4),(9,5),(10,4),(10,5)]
 
 goalSquare = [(7,7)]       
 -- spawnpoints for all the colors
@@ -79,10 +84,12 @@ winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
 winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 
 --entrypoints for all colors
+entryPoints :: [(Cell, (Int,Int))]
 entryPoints = [(Full PlayerRed,(6,2)),(Full PlayerGreen,(12,6)),(Full PlayerYellow,(8,12)),(Full PlayerBlue,(2,8))]
 
+getPlayerStart :: Player -> [(Cell, (Int,Int))] -> (Int,Int)
 getPlayerStart _ [] = (0,0)
-getPlayerStart player ((x,y):xs) | player == fst x = y
+getPlayerStart player ((x,y):xs) | Full player == x = y
                                  | otherwise = getPlayerStart player xs
 
 
@@ -116,7 +123,9 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                     gamePlayer = PlayerRed,
                     gameState = Running,
                     rnd = randoms (mkStdGen 42),
-                    dice = Void
+                    dice = Void,
+                    diceUpdate = False,
+                    pieceMove = None
                   }
             -- This is used to define how large the array created will be
             where indexRange = ((0,0), (n-1, n-1))
@@ -337,6 +346,7 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
 rndNumGen :: [Float] -> Int
 rndNumGen rnd = truncate (head rnd*6+1)
 
+isCoordCorrect :: (Int, Int) -> Bool
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
 
@@ -395,16 +405,35 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord validPositions && (length (findPlayersPos (assocs board) player) <4 || (isSpawnEmpty board player == False)) == True  =
-        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player), (spawnPoint (assocs(board)) player)],
-                              rnd = drop 1 (rnd game),
-                              dice = Dice (rndNumGen (rnd game))}
-    | isCoordCorrect cellCoord && board ! cellCoord == Full player =
-        game { gameBoard = board // [(cellCoord, Empty)]}
-
+    -- places pieces with mouseclick
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord validPositions && 
+    (length (findPlayersPos (assocs board) player) <4 || (isSpawnEmpty board player == False)) == True && diceU == True
+       = playerSwitch $ game { gameBoard = board // [(cellCoord, Full player), (spawnPoint (assocs(board)) player)],
+               diceUpdate = False,
+               dice = Void}
+    -- removes spawn piece and puts it in the entrypoint
+    | isCoordCorrect cellCoord && board ! cellCoord == Full player && dic == Dice 6 && diceU == True
+        = playerSwitch $ game { gameBoard = board // [(cellCoord, Empty),((getPlayerStart player entryPoints), Full player)],
+                                diceUpdate = False,
+                                dice = Void}
+    -- remove piece to and after you can click to move it
+    | isCoordCorrect cellCoord && board ! cellCoord == Full player && diceU == True 
+    = game {pieceMove = Piece cellCoord}
+    -- make it so that if all your pieces are in spawn and you do not get 6 you switch player
+    -- dice transformer
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord dicePos && diceU == False = 
+        if dic /= Dice 6 
+        then playerSwitch $ game{rnd = drop 1 (rnd game),
+                                 dice = Dice (rndNumGen (rnd game)),
+                                 diceUpdate = False }
+        else
+        game {diceUpdate = True}
     | otherwise = game
     where board = gameBoard game
           player = gamePlayer game
+          diceU = diceUpdate game
+          dic = dice game
+          pieceM = pieceMove game
 
 mousePosCell :: (Float,Float) -> (Int,Int)
 mousePosCell (x,y) = ( floor ((y + (fromIntegral screenHeight * 0.5)) / cellHeight)
