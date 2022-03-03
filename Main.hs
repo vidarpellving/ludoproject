@@ -65,14 +65,24 @@ validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8
 
 
 
+
 goalSquare = [(7,7)]
 
+goalSquare = [(7,7)]       
+-- spawnpoints for all the colors
+redSpawn = [(2,2),(3,2),(3,3),(2,3)]
+blueSpawn = [(2,11),(3,11),(3,12),(2,12)]
+greenSpawn = [(11,2),(12,2),(12,3),(11,3)]
+yellowSpawn = [(11,11),(12,11),(12,12),(11,12)]
+
+
+-- the squares that are limited to their colors
 winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
 winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
 winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
 winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 
-
+--entrypoints for all colors
 entryPoints = [(Full PlayerRed,(6,2)),(Full PlayerGreen,(12,6)),(Full PlayerYellow,(8,12)),(Full PlayerBlue,(2,8))]
 
 getPlayerStart _ [] = (0,0)
@@ -105,11 +115,13 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((12,2), Full PlayerGreen),
                                                                                                 ((12,3), Full PlayerGreen),
                                                                                                 ((11,2), Full PlayerGreen),
+
                                                                                                 ((11,3), Full PlayerGreen),
 
                                                                                                 ((1,6), Full PlayerRed),
                                                                                                 ((6,2), Full PlayerBlue),
                                                                                                 ((6,13), Full PlayerBlue)],
+                                                                                                ((11,3), Full PlayerGreen)],
 
 
                     gamePlayer = PlayerRed,
@@ -340,11 +352,20 @@ rndNumGen rnd = truncate (head rnd*6+1)
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
 
+
 {- findPlayersPos (assocs(gameBoard emptyBoard))
 
     RETURNS : list of players of desired color
     EXAMPLE : findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)]
 -}
+    --findPlayersPos (assocs(gameBoard emptyBoard))
+    {-EXAMPLE: findPlayersPos (assocs(gameBoard emptyBoard)) == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),
+                                                                ((2,11),Full PlayerBlue),((2,12),Full PlayerBlue),((3,2),Full PlayerRed),
+                                                                ((3,3),Full PlayerRed),((3,11),Full PlayerBlue),((3,12),Full PlayerBlue),
+                                                                ((6,2),Full PlayerBlue),((11,2),Full PlayerGreen),((11,3),Full PlayerGreen),
+                                                                ((11,11),Full PlayerYellow),((11,12),Full PlayerYellow),((12,2),Full PlayerGreen),
+                                                                ((12,3),Full PlayerGreen),((12,11),Full PlayerYellow),((12,12),Full PlayerYellow)]
+    -}
 findPlayersPos :: [((Int,Int), Cell)] -> Player ->[((Int,Int), Cell)]
 findPlayersPos [] _ = []
 findPlayersPos (((_,_), Empty):xs) player = findPlayersPos xs player
@@ -378,6 +399,36 @@ fromJust :: Maybe a -> a
 fromJust Nothing = error "Maybe.fromJust: Nothing"
 fromJust (Just x) = x
 
+spawnPoint :: [((Int,Int), Cell)] -> Player -> ((Int,Int),Cell)
+spawnPoint [] _ = ((7,7),Empty)
+spawnPoint ((x,y):xs) player =  ((spawnPointCords (findPlayersPos ((x,y):xs) player) player), Empty)
+
+spawnPointCords :: [((Int,Int), Cell)] -> Player -> (Int,Int)
+spawnPointCords [] _ = (7,7)
+spawnPointCords ((x,y):xs) player | player == PlayerRed && elem x redSpawn = x
+                                  | player == PlayerBlue && elem x blueSpawn = x 
+                                  | player == PlayerGreen && elem x greenSpawn = x
+                                  | player == PlayerYellow && elem x yellowSpawn = x
+                                  | otherwise = spawnPointCords xs player
+
+checkSpawnPoints :: Board -> Player -> [Cell]
+checkSpawnPoints board player | player == PlayerRed = map (\i -> (!) board i) redSpawn
+                              | player == PlayerBlue = map (\i -> (!) board i) blueSpawn
+                              | player == PlayerGreen = map (\i -> (!) board i) greenSpawn
+                              | player == PlayerYellow = map (\i -> (!) board i) yellowSpawn
+                              | otherwise = [Empty,Empty,Empty,Empty]
+
+isSpawnEmpty :: Board -> Player -> Bool 
+isSpawnEmpty board player | player == PlayerRed && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
+                         | player == PlayerBlue && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
+                         | player == PlayerGreen && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
+                         | player == PlayerYellow && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
+                         | otherwise = False
+
+movePlayer :: Board -> Int -> Game
+movePlayer = undefined
+
+
 playerSwitch game =
     case gamePlayer game of
         PlayerRed -> game {gamePlayer = PlayerGreen}
@@ -387,12 +438,13 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord ==  Empty && elem cellCoord validPositions =
-        playerSwitch $ game { gameBoard = board // [(cellCoord,Full player)],
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord validPositions && (length (findPlayersPos (assocs board) player) <4 || (isSpawnEmpty board player == False)) == True  =
+        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player), (spawnPoint (assocs(board)) player)],
                               rnd = drop 1 (rnd game),
                               dice = Dice (rndNumGen (rnd game))}
-    | isCoordCorrect cellCoord && board ! cellCoord ==   Full player && elem cellCoord validPositions =
-        {--}  game { gameBoard = board // [(cellCoord,Empty)]}
+    | isCoordCorrect cellCoord && board ! cellCoord == Full player =
+        game { gameBoard = board // [(cellCoord, Empty)]}
+
     | otherwise = game
     where board = gameBoard game
           player = gamePlayer game
