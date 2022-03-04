@@ -30,7 +30,7 @@ type Board = Array (Int, Int) Cell
 -- line 21 is equal, (almost) to data Game = Game Board Player State
 
 data Game = Game { gameBoard :: Board,
-                   gamePlayer :: Player, 
+                   gamePlayer :: Player,
                    gameState :: State,
                    rnd :: [Float],
                    dice :: Dice,
@@ -177,23 +177,23 @@ snapPictureToCell picture (row, column) = translate x y picture
           y = fromIntegral row * cellHeight + cellHeight * 0.5
 
 redCell :: Picture
-redCell = color red $ thickCircle 1.0 radius
+redCell = color red $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 blueCell :: Picture
-blueCell = color blue $ thickCircle 1 radius
+blueCell = color blue $ thickCircle 1 radius
     where radius = min cellWidth cellHeight * 0.75
 
 yellowCell :: Picture
-yellowCell = color yellow $ thickCircle 1.0 radius
+yellowCell = color yellow $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 greenCell :: Picture
-greenCell = color green $ thickCircle 1.0 radius
+greenCell = color green $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 boarderCell :: Picture
-boarderCell = color black $ thickCircle 1.0 radius
+boarderCell = color black $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.81
 
 -- the cells of the board
@@ -275,6 +275,7 @@ whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
 ------------ DICE --------
 visualDiceBG :: Picture
 visualDiceBG = pictures [translate 200 400 (rectangleSolid 80 80)]
+
 diceValue1 :: Picture
 diceValue1 = pictures [translate 200 400 (thickCircle 5 10)]
 diceValue2 :: Picture
@@ -340,7 +341,7 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
    where frame = case gameState game of
         -- gameBoard game is a way to get the value of gameBoard from the datatype Game
             Running -> boardAsRunningPicture (gameBoard game) (dice game)
-            GameOver winner -> boardAsGameOverPicture winner (gameBoard game) 
+            GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
 
 
 rndNumGen :: [Float] -> Int
@@ -351,20 +352,20 @@ isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
 
 
-    --findPlayersPos (assocs(gameBoard emptyBoard))
-    {-EXAMPLE: findPlayersPos (assocs(gameBoard emptyBoard)) == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),
-                                                                ((2,11),Full PlayerBlue),((2,12),Full PlayerBlue),((3,2),Full PlayerRed),
-                                                                ((3,3),Full PlayerRed),((3,11),Full PlayerBlue),((3,12),Full PlayerBlue),
-                                                                ((6,2),Full PlayerBlue),((11,2),Full PlayerGreen),((11,3),Full PlayerGreen),
-                                                                ((11,11),Full PlayerYellow),((11,12),Full PlayerYellow),((12,2),Full PlayerGreen),
-                                                                ((12,3),Full PlayerGreen),((12,11),Full PlayerYellow),((12,12),Full PlayerYellow)]
-    -}
+
+{- findPlayersPos (assocs(gameBoard emptyBoard)) player
+
+    RETURNS : list of players of desired color
+    EXAMPLE : findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)]
+-}
+
 findPlayersPos :: [((Int,Int), Cell)] -> Player ->[((Int,Int), Cell)]
 findPlayersPos [] _ = []
 findPlayersPos (((_,_), Empty):xs) player = findPlayersPos xs player
 findPlayersPos array@((x,y):xs) player
     | y == Full player = (x,Full player) : findPlayersPos xs player
     | otherwise = findPlayersPos xs player
+
 
 {- getNextPos lst point
     Gives the next possible position from a given point on the board
@@ -384,7 +385,6 @@ fromJust :: Maybe a -> a
 fromJust Nothing = error "Maybe.fromJust: Nothing"
 fromJust (Just x) = x
 
-
 spawnPoint :: [((Int,Int), Cell)] -> Player -> ((Int,Int),Cell)
 spawnPoint [] _ = ((7,7),Empty)
 spawnPoint ((x,y):xs) player =  ((spawnPointCords (findPlayersPos ((x,y):xs) player) player), Empty)
@@ -396,6 +396,7 @@ spawnPointCords ((x,y):xs) player | player == PlayerRed && elem x redSpawn = x
                                   | player == PlayerGreen && elem x greenSpawn = x
                                   | player == PlayerYellow && elem x yellowSpawn = x
                                   | otherwise = spawnPointCords xs player
+
 -- checks if the spawnpoints are empty or not, returns a list of either [Full PlayerRed,Empty,Full PlayerRed,Full PlayerRed]
 checkSpawnPoints :: Board -> Player -> [Cell]
 checkSpawnPoints board player | player == PlayerRed = map (\i -> (!) board i) redSpawn
@@ -403,7 +404,6 @@ checkSpawnPoints board player | player == PlayerRed = map (\i -> (!) board i) re
                               | player == PlayerGreen = map (\i -> (!) board i) greenSpawn
                               | player == PlayerYellow = map (\i -> (!) board i) yellowSpawn
                               | otherwise = [Empty,Empty,Empty,Empty]
-
 
 -- returns an list of empty if the spawnpoint of a player is empty
 isSpawnEmpty :: Board -> Player -> Bool 
@@ -413,6 +413,7 @@ isSpawnEmpty board player | player == PlayerRed && checkSpawnPoints board player
                          | player == PlayerYellow && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
                          | otherwise = False
 
+-- checks if a player is in spawn or not
 isInSpawn :: (Int, Int) -> Player -> Bool
 isInSpawn coords player = case player of 
     PlayerRed -> elem coords redSpawn
@@ -426,8 +427,6 @@ diceConverter Void = 0
 diceConverter (Dice x) = x
 -- Probably takes the position of the clicked player and then checks wich position that is in the valid positions
 -- then adds the dice to that number and checks the validPositions what the coords is for that number.
-
-
 
 playerSwitch game =
     case gamePlayer game of
@@ -445,14 +444,12 @@ playerTurn game cellCoord
                                 rnd = drop 1 (rnd game),
                                 dice = Void}
     -- pick which piece to move
-    -- crashes if cellCoord + dic becomes something outside the arrayrange
     | isCoordCorrect cellCoord && board ! cellCoord == Full player && diceU == True && elem cellCoord validPositions 
     = playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic, Full player)],
-                                                                    -- ((fst cellCoord + diceConverter dic,snd cellCoord + diceConverter dic), Full player)
                            rnd = drop 1 (rnd game),
                            diceUpdate = False,
                            dice = Void}
-    -- Dice for when there are no pieces on the board
+    -- Dice for when there are no pieces on the board for that player
     | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord dicePos && diceU == False &&
     (checkSpawnPoints board player) == [Full player, Full player, Full player, Full player]  = 
         case Dice (rndNumGen (rnd game)) of
