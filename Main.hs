@@ -10,9 +10,6 @@ import System.IO
 import Data.List
 import Data.Time
 
---dice
---data Dice = Int deriving Show
-
 --player
 data Player = PlayerRed | PlayerBlue | PlayerYellow | PlayerGreen deriving (Eq, Show)
 
@@ -24,6 +21,8 @@ data Cell = Empty | Full Player deriving (Eq, Show)
 
 data Dice = Void | Dice Int deriving (Eq, Show)
 
+data Move = None | Piece (Int, Int) deriving (Eq, Show)
+
 -- board
 type Board = Array (Int, Int) Cell
 
@@ -34,7 +33,9 @@ data Game = Game { gameBoard :: Board,
                    gamePlayer :: Player, 
                    gameState :: State,
                    rnd :: [Float],
-                   dice :: Dice
+                   dice :: Dice,
+                   diceUpdate :: Bool,
+                   pieceMove :: Move
                  }
 -- Window
 window = InWindow "Ludo" (600, 600) (100,100)
@@ -66,20 +67,29 @@ validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8
                   (8,12),(8,13),(8,14),(7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9),(6,8),(5,8),(4,8),(3,8),
                   (2,8),(1,8),(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6),(6,6),(6,5),(6,4),(6,3)]
 
-
+--dice position
+dicePos = [(9,4),(9,5),(10,4),(10,5)]
 
 goalSquare = [(7,7)]       
+-- spawnpoints for all the colors
+redSpawn = [(2,2),(3,2),(3,3),(2,3)]
+blueSpawn = [(2,11),(3,11),(3,12),(2,12)]
+greenSpawn = [(11,2),(12,2),(12,3),(11,3)]
+yellowSpawn = [(11,11),(12,11),(12,12),(11,12)]
 
+-- the squares that are limited to their colors
 winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
 winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
 winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
 winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 
-
+--entrypoints for all colors
+entryPoints :: [(Cell, (Int,Int))]
 entryPoints = [(Full PlayerRed,(6,2)),(Full PlayerGreen,(12,6)),(Full PlayerYellow,(8,12)),(Full PlayerBlue,(2,8))]
 
+getPlayerStart :: Player -> [(Cell, (Int,Int))] -> (Int,Int)
 getPlayerStart _ [] = (0,0)
-getPlayerStart player ((x,y):xs) | player == fst x = y
+getPlayerStart player ((x,y):xs) | Full player == x = y
                                  | otherwise = getPlayerStart player xs
 
 
@@ -108,14 +118,14 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((12,2), Full PlayerGreen),
                                                                                                 ((12,3), Full PlayerGreen),
                                                                                                 ((11,2), Full PlayerGreen),
-                                                                                                ((11,3), Full PlayerGreen),
-                                                                                                ((1,6), Full PlayerRed),
-                                                                                                ((6,13), Full PlayerBlue)],
+                                                                                                ((11,3), Full PlayerGreen)],
 
                     gamePlayer = PlayerRed,
                     gameState = Running,
                     rnd = randoms (mkStdGen 42),
-                    dice = Void
+                    dice = Void,
+                    diceUpdate = False,
+                    pieceMove = None
                   }
             -- This is used to define how large the array created will be
             where indexRange = ((0,0), (n-1, n-1))
@@ -334,9 +344,90 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
 
 
 rndNumGen :: [Float] -> Int
-rndNumGen rnd = truncate (head rnd*6+1)
+rndNumGen rnd = truncate (head rnd*6+1)
 
+isCoordCorrect :: (Int, Int) -> Bool
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
+
+
+
+    --findPlayersPos (assocs(gameBoard emptyBoard))
+    {-EXAMPLE: findPlayersPos (assocs(gameBoard emptyBoard)) == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),
+                                                                ((2,11),Full PlayerBlue),((2,12),Full PlayerBlue),((3,2),Full PlayerRed),
+                                                                ((3,3),Full PlayerRed),((3,11),Full PlayerBlue),((3,12),Full PlayerBlue),
+                                                                ((6,2),Full PlayerBlue),((11,2),Full PlayerGreen),((11,3),Full PlayerGreen),
+                                                                ((11,11),Full PlayerYellow),((11,12),Full PlayerYellow),((12,2),Full PlayerGreen),
+                                                                ((12,3),Full PlayerGreen),((12,11),Full PlayerYellow),((12,12),Full PlayerYellow)]
+    -}
+findPlayersPos :: [((Int,Int), Cell)] -> Player ->[((Int,Int), Cell)]
+findPlayersPos [] _ = []
+findPlayersPos (((_,_), Empty):xs) player = findPlayersPos xs player
+findPlayersPos array@((x,y):xs) player
+    | y == Full player = (x,Full player) : findPlayersPos xs player
+    | otherwise = findPlayersPos xs player
+
+{- getNextPos lst point
+    Gives the next possible position from a given point on the board
+    RETURNS  :
+    EXAMPLES :  getNextPos validPositions (12,6) == (13,6)
+                getNextPos validPositions (14,6) == (14,7)
+-}
+getNextPos ::  (Int, Int) -> Dice -> (Int, Int)
+getNextPos point dice = validPositions !! (fromJust (elemIndex point validPositions) + diceConverter dice)
+
+{- fromJust a
+    Translates and integer of type Maybe to only a Integer
+    RETURNS  : a single number
+    EXAMPLES : fromJust (Just 7) == 7
+-}
+fromJust :: Maybe a -> a
+fromJust Nothing = error "Maybe.fromJust: Nothing"
+fromJust (Just x) = x
+
+
+spawnPoint :: [((Int,Int), Cell)] -> Player -> ((Int,Int),Cell)
+spawnPoint [] _ = ((7,7),Empty)
+spawnPoint ((x,y):xs) player =  ((spawnPointCords (findPlayersPos ((x,y):xs) player) player), Empty)
+
+spawnPointCords :: [((Int,Int), Cell)] -> Player -> (Int,Int)
+spawnPointCords [] _ = (7,7)
+spawnPointCords ((x,y):xs) player | player == PlayerRed && elem x redSpawn = x
+                                  | player == PlayerBlue && elem x blueSpawn = x 
+                                  | player == PlayerGreen && elem x greenSpawn = x
+                                  | player == PlayerYellow && elem x yellowSpawn = x
+                                  | otherwise = spawnPointCords xs player
+-- checks if the spawnpoints are empty or not, returns a list of either [Full PlayerRed,Empty,Full PlayerRed,Full PlayerRed]
+checkSpawnPoints :: Board -> Player -> [Cell]
+checkSpawnPoints board player | player == PlayerRed = map (\i -> (!) board i) redSpawn
+                              | player == PlayerBlue = map (\i -> (!) board i) blueSpawn
+                              | player == PlayerGreen = map (\i -> (!) board i) greenSpawn
+                              | player == PlayerYellow = map (\i -> (!) board i) yellowSpawn
+                              | otherwise = [Empty,Empty,Empty,Empty]
+
+
+-- returns an list of empty if the spawnpoint of a player is empty
+isSpawnEmpty :: Board -> Player -> Bool 
+isSpawnEmpty board player | player == PlayerRed && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
+                         | player == PlayerBlue && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
+                         | player == PlayerGreen && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
+                         | player == PlayerYellow && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
+                         | otherwise = False
+
+isInSpawn :: (Int, Int) -> Player -> Bool
+isInSpawn coords player = case player of 
+    PlayerRed -> elem coords redSpawn
+    PlayerBlue -> elem coords blueSpawn
+    PlayerGreen -> elem coords greenSpawn
+    PlayerYellow -> elem coords yellowSpawn
+
+-- converts dice to an int
+diceConverter :: Dice -> Int
+diceConverter Void = 0
+diceConverter (Dice x) = x
+-- Probably takes the position of the clicked player and then checks wich position that is in the valid positions
+-- then adds the dice to that number and checks the validPositions what the coords is for that number.
+
+
 
 playerSwitch game =
     case gamePlayer game of
@@ -347,14 +438,36 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord validPositions =
-        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player)],
-                              rnd = drop 1 (rnd game),
-                              dice = Dice (rndNumGen (rnd game))}
-
+    -- removes spawn piece and puts it in the entrypoint
+    | isCoordCorrect cellCoord && board ! cellCoord == Full player && dic == Dice 6 && diceU == True && isInSpawn cellCoord player
+        = playerSwitch $ game { gameBoard = board // [(cellCoord, Empty),((getPlayerStart player entryPoints), Full player)],
+                                diceUpdate = False,
+                                rnd = drop 1 (rnd game),
+                                dice = Void}
+    -- pick which piece to move
+    -- crashes if cellCoord + dic becomes something outside the arrayrange
+    | isCoordCorrect cellCoord && board ! cellCoord == Full player && diceU == True && elem cellCoord validPositions 
+    = playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic, Full player)],
+                                                                    -- ((fst cellCoord + diceConverter dic,snd cellCoord + diceConverter dic), Full player)
+                           rnd = drop 1 (rnd game),
+                           diceUpdate = False,
+                           dice = Void}
+    -- Dice for when there are no pieces on the board
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord dicePos && diceU == False &&
+    (checkSpawnPoints board player) == [Full player, Full player, Full player, Full player]  = 
+        case Dice (rndNumGen (rnd game)) of
+            Dice 6 -> game{rnd = drop 1 (rnd game),dice = Dice (rndNumGen (rnd game)),diceUpdate = True }
+            Dice _ -> playerSwitch $ game{rnd = drop 1 (rnd game),dice = Dice (rndNumGen (rnd game)),diceUpdate = False }
+    -- dice for everything else
+    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord dicePos && diceU == False =
+        game{rnd = drop 1 (rnd game),dice = Dice (rndNumGen (rnd game)),diceUpdate = True }
+    -- if something bad is pressed redo the function until something good is pressed
     | otherwise = game
     where board = gameBoard game
           player = gamePlayer game
+          diceU = diceUpdate game
+          dic = dice game
+          pieceM = pieceMove game
 
 mousePosCell :: (Float,Float) -> (Int,Int)
 mousePosCell (x,y) = ( floor ((y + (fromIntegral screenHeight * 0.5)) / cellHeight)
