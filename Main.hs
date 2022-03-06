@@ -28,7 +28,7 @@ type Board = Array (Int, Int) Cell
 -- line 21 is equal, (almost) to data Game = Game Board Player State
 
 data Game = Game { gameBoard :: Board,
-                   gamePlayer :: Player, 
+                   gamePlayer :: Player,
                    gameState :: State,
                    rnd :: [Float],
                    dice :: Dice
@@ -65,7 +65,7 @@ validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8
 
 
 
-goalSquare = [(7,7)]       
+goalSquare = [(7,7)]
 
 winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
 winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
@@ -91,25 +91,25 @@ getPlayerStart player ((x,y):xs) | player == fst x = y
 
 -}
 emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat Empty)) // [((3,3), Full PlayerRed),
-                                                                                                ((3,2), Full PlayerRed),
-                                                                                                ((2,2), Full PlayerRed),
-                                                                                                ((2,3), Full PlayerRed),
-                                                                                                ((3,12), Full PlayerBlue),
-                                                                                                ((2,12), Full PlayerBlue),
-                                                                                                ((3,11), Full PlayerBlue),
-                                                                                                ((2,11), Full PlayerBlue),
-                                                                                                ((11,11), Full PlayerYellow),
-                                                                                                ((11,12), Full PlayerYellow),
-                                                                                                ((12,11), Full PlayerYellow),
-                                                                                                ((12,12), Full PlayerYellow),
-                                                                                                ((12,2), Full PlayerGreen),
-                                                                                                ((12,3), Full PlayerGreen),
-                                                                                                ((11,2), Full PlayerGreen),
-                                                                                                ((11,3), Full PlayerGreen),
-                                                                                                
-                                                                                                ((1,6), Full PlayerRed),
-                                                                                                ((6,2), Full PlayerBlue),
-                                                                                                ((6,13), Full PlayerBlue)],
+                                                                                             ((3,2), Full PlayerRed),
+                                                                                             ((2,2), Full PlayerRed),
+                                                                                             ((2,3), Full PlayerRed),
+                                                                                             ((3,12), Full PlayerBlue),
+                                                                                             ((2,12), Full PlayerBlue),
+                                                                                             ((3,11), Full PlayerBlue),
+                                                                                             ((2,11), Full PlayerBlue),
+                                                                                             ((11,11), Full PlayerYellow),
+                                                                                             ((11,12), Full PlayerYellow),
+                                                                                             ((12,11), Full PlayerYellow),
+                                                                                             ((12,12), Full PlayerYellow),
+                                                                                             ((12,2), Full PlayerGreen),
+                                                                                             ((12,3), Full PlayerGreen),
+                                                                                             ((11,2), Full PlayerGreen),
+                                                                                             ((11,3), Full PlayerGreen),
+
+                                                                                             ((1,6), Full PlayerRed),
+                                                                                             ((6,2), Full PlayerBlue),
+                                                                                             ((6,13), Full PlayerBlue)],
 
 
                     gamePlayer = PlayerRed,
@@ -167,23 +167,23 @@ snapPictureToCell picture (row, column) = translate x y picture
           y = fromIntegral row * cellHeight + cellHeight * 0.5
 
 redCell :: Picture
-redCell = color red $ thickCircle 1.0 radius
+redCell = color red $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 blueCell :: Picture
-blueCell = color blue $ thickCircle 1 radius
+blueCell = color blue $ thickCircle 1 radius
     where radius = min cellWidth cellHeight * 0.75
 
 yellowCell :: Picture
-yellowCell = color yellow $ thickCircle 1.0 radius
+yellowCell = color yellow $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 greenCell :: Picture
-greenCell = color green $ thickCircle 1.0 radius
+greenCell = color green $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
 boarderCell :: Picture
-boarderCell = color black $ thickCircle 1.0 radius
+boarderCell = color black $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.81
 
 -- the cells of the board
@@ -265,6 +265,7 @@ whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
 ------------ DICE --------
 visualDiceBG :: Picture
 visualDiceBG = pictures [translate 200 400 (rectangleSolid 80 80)]
+
 diceValue1 :: Picture
 diceValue1 = pictures [translate 200 400 (thickCircle 5 10)]
 diceValue2 :: Picture
@@ -330,7 +331,7 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
    where frame = case gameState game of
         -- gameBoard game is a way to get the value of gameBoard from the datatype Game
             Running -> boardAsRunningPicture (gameBoard game) (dice game)
-            GameOver winner -> boardAsGameOverPicture winner (gameBoard game) 
+            GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
 
 
 rndNumGen :: [Float] -> Int
@@ -338,26 +339,52 @@ rndNumGen rnd = truncate (head rnd*6+1)
 
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
+{- movePlayer validPts point
+    Moves a player(of selected color) from its current position to a position 1-6 cells forward.
+    PRE      :
+    RETURNS  : 
+    EXAMPLES :
+-}
+-- movePlayer (x:xs) = let
+--                         x = fst (x:xs)
+--                     in
+--                         movePlayer (x:xs)
+--                         where
+--                             moveplayer lst = if x `elem` validPositions then (getNextPos validPositions x, snd x)
+--                                              else movePlayer xs
+takeFirst [] = []
+takeFirst (x:xs) = x
 
-    --findPlayersPos (assocs(gameBoard emptyBoard))
-    {-EXAMPLE: findPlayersPos (assocs(gameBoard emptyBoard)) == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),
-                                                                ((2,11),Full PlayerBlue),((2,12),Full PlayerBlue),((3,2),Full PlayerRed),
-                                                                ((3,3),Full PlayerRed),((3,11),Full PlayerBlue),((3,12),Full PlayerBlue),
-                                                                ((6,2),Full PlayerBlue),((11,2),Full PlayerGreen),((11,3),Full PlayerGreen),
-                                                                ((11,11),Full PlayerYellow),((11,12),Full PlayerYellow),((12,2),Full PlayerGreen),
-                                                                ((12,3),Full PlayerGreen),((12,11),Full PlayerYellow),((12,12),Full PlayerYellow)]
-    -}
-findPlayersPos :: [((Int,Int), Cell)] -> [((Int,Int), Cell)]
-findPlayersPos [] = []
-findPlayersPos array@((x,y):xs)
-    | y == Full PlayerRed = (x,Full PlayerRed) : findPlayersPos xs
-    | y == Full PlayerGreen = (x,Full PlayerGreen) : findPlayersPos xs
-    | y == Full PlayerYellow = (x,Full PlayerYellow) : findPlayersPos xs
-    | y == Full PlayerBlue = (x,Full PlayerBlue) : findPlayersPos xs
-findPlayersPos (((_,_), Empty):xs) = findPlayersPos xs
 
-movePlayer :: Board -> Int -> Game
-movePlayer = undefined
+{- findPlayersPos (assocs(gameBoard emptyBoard))
+
+    RETURNS : list of players of desired color
+    EXAMPLE : findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)]
+-}
+findPlayersPos :: [((Int,Int), Cell)] -> Player ->[((Int,Int), Cell)]
+findPlayersPos [] _ = []
+findPlayersPos (((_,_), Empty):xs) player = findPlayersPos xs player
+findPlayersPos array@((x,y):xs) player
+    | y == Full player = (x, Full player) : findPlayersPos xs player
+    | otherwise = findPlayersPos xs player
+
+{- getNextPos lst point
+    Gives the next possible position from a given point on the board
+    RETURNS  :
+    EXAMPLES :  getNextPos validPositions (12,6) == (13,6)
+                getNextPos validPositions (14,6) == (14,7)
+-}
+getNextPos :: [a] -> (Int, Int) -> (Int, Int)
+getNextPos validPts point = validPositions !! (fromJust (elemIndex point validPositions) +1)
+
+{- fromJust a
+    Translates and integer of type Maybe to only a Integer
+    RETURNS  : a single number
+    EXAMPLES : fromJust (Just 7) == 7
+-}
+fromJust :: Maybe a -> a
+fromJust Nothing = error "Maybe.fromJust: Nothing"
+fromJust (Just x) = x
 
 playerSwitch game =
     case gamePlayer game of
@@ -368,11 +395,12 @@ playerSwitch game =
 
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
-    | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord validPositions =
-        playerSwitch $ game { gameBoard = board // [(cellCoord, Full player)],
+    | isCoordCorrect cellCoord && board ! cellCoord ==  Empty && elem cellCoord validPositions =
+        playerSwitch $ game { gameBoard = board // [(cellCoord,Full player)],
                               rnd = drop 1 (rnd game),
                               dice = Dice (rndNumGen (rnd game))}
-
+    | isCoordCorrect cellCoord && board ! cellCoord ==   Full player && elem cellCoord validPositions =
+        {--}  game { gameBoard = board // [(cellCoord,Empty)]}
     | otherwise = game
     where board = gameBoard game
           player = gamePlayer game
