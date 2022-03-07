@@ -55,11 +55,6 @@ cellHeight = fromIntegral screenHeight / fromIntegral n
 --How large the board is, 15x15
 n :: Int
 n = 15
-validPositions :: [(Int, Int)]
-validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8,6),(9,6),(10,6),(11,6),
-                  (12,6),(13,6),(14,6),(14,7),(14,8),(13,8),(12,8),(11,8),(10,8),(9,8),(8,8),(8,9),(8,10),(8,11),
-                  (8,12),(8,13),(8,14),(7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9),(6,8),(5,8),(4,8),(3,8),
-                  (2,8),(1,8),(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6),(6,6),(6,5),(6,4),(6,3)]
 
 --Coordinates and curcial points; validPositions, goalSquare, winColor, entryPoint
 --Total 56 possible positions before winColorRow(which contains 7 positions.)
@@ -93,12 +88,6 @@ redSpawn = [(2,2),(3,2),(3,3),(2,3)]
 blueSpawn = [(2,11),(3,11),(3,12),(2,12)]
 greenSpawn = [(11,2),(12,2),(12,3),(11,3)]
 yellowSpawn = [(11,11),(12,11),(12,12),(11,12)]
-
--- the squares that are limited to their colors
-winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
-winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
-winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
-winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 
 --entrypoints for all colors
 entryPoints :: [(Cell, (Int,Int))]
@@ -370,14 +359,11 @@ isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
 
 
-    --findPlayersPos (assocs(gameBoard emptyBoard))
-    {-EXAMPLE: findPlayersPos (assocs(gameBoard emptyBoard)) == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),
-                                                                ((2,11),Full PlayerBlue),((2,12),Full PlayerBlue),((3,2),Full PlayerRed),
-                                                                ((3,3),Full PlayerRed),((3,11),Full PlayerBlue),((3,12),Full PlayerBlue),
-                                                                ((6,2),Full PlayerBlue),((11,2),Full PlayerGreen),((11,3),Full PlayerGreen),
-                                                                ((11,11),Full PlayerYellow),((11,12),Full PlayerYellow),((12,2),Full PlayerGreen),
-                                                                ((12,3),Full PlayerGreen),((12,11),Full PlayerYellow),((12,12),Full PlayerYellow)]
-    -}
+{- findPlayersPos (assocs(gameBoard emptyBoard)) player
+
+    RETURNS : list of players of desired color
+    EXAMPLE : findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)]
+-}
 findPlayersPos :: [((Int,Int), Cell)] -> Player ->[((Int,Int), Cell)]
 findPlayersPos [] _ = []
 findPlayersPos (((_,_), Empty):xs) player = findPlayersPos xs player
@@ -419,7 +405,6 @@ playerValidPositions player | player == PlayerRed = validPositionsRed
                             | player == PlayerBlue = validPositionsBlue
                             | player == PlayerGreen = validPositionsGreen
                             | player == PlayerYellow = validPositionsYellow
-                            | otherwise = validPositions
 
 -- get the first spawnPoint that is not empty for that player
 spawnPoint :: [((Int,Int), Cell)] -> Player -> ((Int,Int),Cell)
@@ -441,7 +426,7 @@ checkSpawnPoints board player | player == PlayerRed = map (\i -> (!) board i) re
                               | player == PlayerGreen = map (\i -> (!) board i) greenSpawn
                               | player == PlayerYellow = map (\i -> (!) board i) yellowSpawn
                               | otherwise = [Empty,Empty,Empty,Empty]
-
+-- same as function above without empty
 checkSpawnPointsWithoutEmpty :: Board -> Player -> [Cell]
 checkSpawnPointsWithoutEmpty board player = filter (/= Empty) (checkSpawnPoints board player)
 
@@ -457,7 +442,7 @@ emptySpawnPoint board player | player == PlayerRed = redSpawn !! whenIsEmpty (ch
 whenIsEmpty :: [Cell] -> Int -> Int
 whenIsEmpty [] acc = acc
 whenIsEmpty (x:xs) acc | x == Empty = acc
-                       | otherwise = whenIsEmpty xs acc+1
+                       | otherwise = whenIsEmpty xs acc+1
 
 -- returns an list of empty if the spawnpoint of a player is empty
 isSpawnEmpty :: Board -> Player -> Bool
