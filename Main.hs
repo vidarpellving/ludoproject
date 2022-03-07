@@ -1,5 +1,6 @@
 module Main where
 
+import Test.HUnit
 import Graphics.Gloss
 import Graphics.Gloss.Data.Color
 import Data.Array
@@ -10,11 +11,12 @@ import System.IO
 import Data.List
 import Data.Time
 
+
 --player
 data Player = PlayerRed | PlayerBlue | PlayerYellow | PlayerGreen deriving (Eq, Show)
 
 --gamestate
-data State = Running | GameOver (Maybe Player)
+data StateGame = Running | GameOver (Maybe Player)
 
 -- if a cell is filled with a character or not
 data Cell = Empty | Full Player deriving (Eq, Show)
@@ -29,11 +31,11 @@ type Board = Array (Int, Int) Cell
 
 data Game = Game { gameBoard :: Board,
                    gamePlayer :: Player,
-                   gameState :: State,
+                   gameState :: StateGame,
                    rnd :: [Float],
                    dice :: Dice,
                    diceUpdate :: Bool
-                 }
+                 } 
 -- Window
 window = InWindow "Ludo" (600, 600) (100,100)
 
@@ -319,6 +321,7 @@ diceValue6 = pictures [translate 180 380 (thickCircle 5 10),
     each color has a function for displaying itself
     boardGrid draws the lines for the grid
 -}
+boardAsPicture :: Board -> Picture
 boardAsPicture board =
     pictures [ redCellsOfBoard board,
                blueCellsOfBoard board,
@@ -337,6 +340,7 @@ boardAsPicture board =
     outcomeColor winner gets the color of the winner.
     boardAsPicture board draws the board
 -}
+boardAsGameOverPicture :: Maybe Player -> Board -> Picture
 boardAsGameOverPicture winner board = color (outcomeColor winner) (boardAsPicture board)
 
 
@@ -350,7 +354,7 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
             Running -> boardAsRunningPicture (gameBoard game) (dice game)
             GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
 
-
+-- generates a random integer between 1 to 6
 rndNumGen :: [Float] -> Int
 rndNumGen rnd = truncate (head rnd*6+1)
 -- returns True if the tuple is inside the board and False if it is outside
@@ -406,19 +410,6 @@ playerValidPositions player | player == PlayerRed = validPositionsRed
                             | player == PlayerGreen = validPositionsGreen
                             | player == PlayerYellow = validPositionsYellow
 
--- get the first spawnPoint that is not empty for that player
-spawnPoint :: [((Int,Int), Cell)] -> Player -> ((Int,Int),Cell)
-spawnPoint [] _ = ((7,7),Empty)
-spawnPoint ((x,y):xs) player =  (spawnPointCords (findPlayersPos ((x,y):xs) player) player, Empty)
-
--- same as above but gives the cords only
-spawnPointCords :: [((Int,Int), Cell)] -> Player -> (Int,Int)
-spawnPointCords [] _ = (7,7)
-spawnPointCords ((x,y):xs) player | player == PlayerRed && elem x redSpawn = x
-                                  | player == PlayerBlue && elem x blueSpawn = x
-                                  | player == PlayerGreen && elem x greenSpawn = x
-                                  | player == PlayerYellow && elem x yellowSpawn = x
-                                  | otherwise = spawnPointCords xs player
 -- checks if the spawnpoints are empty or not, returns a list of either [Full PlayerRed,Empty,Full PlayerRed,Full PlayerRed]
 checkSpawnPoints :: Board -> Player -> [Cell]
 checkSpawnPoints board player | player == PlayerRed = map (\i -> (!) board i) redSpawn
@@ -473,6 +464,7 @@ cellConverter (Full player) = player
 
 
 
+playerSwitch :: Game -> Game
 playerSwitch game =
     case gamePlayer game of
         PlayerRed -> game {gamePlayer = PlayerGreen}
@@ -530,8 +522,8 @@ playerTurn game cellCoord
                            rnd = drop 1 (rnd game),
                            diceUpdate = False,
                            dice = Void}
-    else
-        playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player),
+    else if board ! (getNextPos cellCoord dic player) == Full player then game
+        else playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player),
         (emptySpawnPoint board (cellConverter(board ! (getNextPos cellCoord dic player))),board ! (getNextPos cellCoord dic player))],
                            rnd = drop 1 (rnd game),
                            diceUpdate = False,
@@ -582,6 +574,39 @@ main = do
 
 ------------------ TEST CASES ---------------------
 
--- test1 = TestCase $ assertEqual 
+-- snapPictureToCell
+-- test1 = TestCase $ assertEqual "snapPictureToCell redCell (7,7)" Translate 300.0 300.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0)) (snapPictureToCell redCell (7,7))
 
--- runtests = runTestTT $ TestList [test1,test2]
+-- rndNumGen
+test2 = TestCase $ assertEqual "rndNumGen [0.79291392193]" 5 (rndNumGen [0.79291392193]) 
+
+--isCoordCorrect
+test3 = TestCase $ assertBool "isCoordCorrect (7,7)" (isCoordCorrect (7,7))
+
+--findPlayerPos
+test4 = TestCase $ assertEqual "findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed" [((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)] (findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed)
+
+--getNextPos 
+test5 = TestCase $ assertEqual "getNextPos (6,1) (Dice 6) PlayerRed" (8,3) (getNextPos (6,1) (Dice 6) PlayerRed)
+test6 = TestCase $ assertEqual "getNextPos (3,6) (Dice 4) PlayerBlue" (6,5) (getNextPos (3,6) (Dice 4) PlayerBlue)
+--getNextPosWin
+test7 = TestCase $ assertEqual "getNextPosWin (12,7) (Dice 6) PlayerYellow"  (8,7) (getNextPosWin (12,7) (Dice 6) PlayerYellow)
+
+--isInWinRow
+test8 = TestCase $ assertBool "isInWinRow (7,4) PlayerRed" (isInWinRow (7,4) PlayerRed)
+
+--checkSpawnPoints
+test9 = TestCase $ assertEqual "checkSpawnPoints (gameBoard emptyBoard) PlayerBlue" [Full PlayerBlue,Full PlayerBlue,Full PlayerBlue,Full PlayerBlue] (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue)
+
+--whenIsEmpty
+test10 = TestCase $ assertEqual "whenIsEmpty (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue) 0" 4 (whenIsEmpty (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue) 0)
+
+--emptySpawnPoint
+test11 = TestCase $ assertEqual "emptySpawnPoint (gameBoard emptyBoard) PlayerYellow" (7,7) (emptySpawnPoint (gameBoard emptyBoard) PlayerYellow)
+
+--isInSpawn
+test12 = TestCase $ assertBool "isInSpawn (12,2) PlayerGreen" (isInSpawn (12,2) PlayerGreen)
+
+--playerSwitch
+-- test13 = TestCase $ assertEqual "playerSwitch emptyBoard" (emptyBoard {gamePlayer = PlayerGreen}) (playerSwitch emptyBoard)
+runtests = runTestTT $ TestList [test2,test3,test4,test5,test6,test7,test8,test9,test10,test11,test12]
