@@ -122,20 +122,20 @@ getPlayerStart player ((x,y):xs) | Full player == x = y
 
 -}
 emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat Empty)) // [((3,3), Full PlayerRed),
-                                                                                                -- ((3,2), Full PlayerRed),
-                                                                                                -- ((2,2), Full PlayerRed),
-                                                                                                -- ((2,3), Full PlayerRed),
-                                                                                                -- ((3,12), Full PlayerBlue),
-                                                                                                -- ((2,12), Full PlayerBlue),
-                                                                                                -- ((3,11), Full PlayerBlue),
+                                                                                                ((3,2), Full PlayerRed),
+                                                                                                ((2,2), Full PlayerRed),
+                                                                                                ((2,3), Full PlayerRed),
+                                                                                                ((3,12), Full PlayerBlue),
+                                                                                                ((2,12), Full PlayerBlue),
+                                                                                                ((3,11), Full PlayerBlue),
                                                                                                 ((2,11), Full PlayerBlue),
-                                                                                                -- ((11,11), Full PlayerYellow),
-                                                                                                -- ((11,12), Full PlayerYellow),
-                                                                                                -- ((12,11), Full PlayerYellow),
+                                                                                                ((11,11), Full PlayerYellow),
+                                                                                                ((11,12), Full PlayerYellow),
+                                                                                                ((12,11), Full PlayerYellow),
                                                                                                 ((12,12), Full PlayerYellow),
-                                                                                                -- ((12,2), Full PlayerGreen),
-                                                                                                -- ((12,3), Full PlayerGreen),
-                                                                                                -- ((11,2), Full PlayerGreen),
+                                                                                                ((12,2), Full PlayerGreen),
+                                                                                                ((12,3), Full PlayerGreen),
+                                                                                                ((11,2), Full PlayerGreen),
                                                                                                 ((11,3), Full PlayerGreen)],
 
                     gamePlayer = PlayerRed,
@@ -592,6 +592,7 @@ main :: IO ()
 main = do
     time <- timeGen
     play window backgroundColor 30 (emptyBoard {rnd = randoms (mkStdGen time)}) gameAsPicture transformGame (const id)
+
 
 
 ------------------ TEST CASES ---------------------
