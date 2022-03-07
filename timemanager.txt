@@ -1,0 +1,59 @@
+# ludoproject
+
+FORMAT: Date(Day/Month/Year) - Name - Time - What has been done
+
+16/02/2022 Whole group - 0915-1000 - had our first meeting with our supervisor where we made a group discord, github repository, went over our group rules and made a loose attack plan for how to tackle our project.
+
+18/02/2022 Vidar 1530 - 1630 - git stuff
+18/02/2022 Sigurd 1530 - 1630 - learning to push and pull on git
+18/02/2022 Anton 1530 - 1630 - mastering to use git and github
+
+21/02/2022 Anton 0830 - 1000 - Trying to get Gloss to work
+21/02/2022 Vidar 1700 - 1800 - learning that gloss is bad
+
+22/02/2022 Vidar 1500 - 1600 - Making gloss work
+22/02/2022 Anton 1500 - 1600 - Making gloss work
+
+23/02/2022 Anton 1030-1200, 1500-1700, 1830-2000 - Working on grid with Gloss
+
+24/02/2022 Sigurd 1030-1115 - Installing gloss on mac since gloss and windows are not friends. Also moving our work diary from github to google drive for easier access.
+24/02/2022 Vidar 1115 - 1245 - Making a workable board with 4 players.
+
+26/02/2022 Sigurd 1300 - 1600 - Continuing the work with gloss structure
+26/02/2022 Vidar 1300 - 1600 - Continuing the work with gloss structure
+26/02/2022 Anton 1300 - 1600 - Continuing the work with gloss structure
+
+27/02/2022 Anton 1600 - 1800 Coding dice, googling for inspiration.
+27/02/2022 Sigurd 1600 - 1800 - Tried to change color of the gameboard and started coding a dice
+
+28/02/2022 Vidar 1030 - 1700 Made a proper ludo board in gloss. 
+28/02/2022 Sigurd 1030 - 1700 Made an on click event. Made a sketch of our array for visual comprehension and aid. 
+                              Made a txt of Ludo logic. Coded a list of cells where the pieces can move on (white path) 
+28/02/2022 Anton 1030 - 1700 Finished the code for a dice and started coding the graphic implementation of it. 
+                             Made a list of valid cells where pieces can be placed(colored path)
+
+01/03/2022 Vidar 1300 - 1800 Went down the random rabbit hole
+01/03/2022 Sigurd 1300 - 1800 Coded in a dice on the game board, with visual numbers
+01/03/2022 Anton 1300 -1800 Version 1 of findPlayerPos
+
+02/03/2022 Anton 1300 - 1800 Linking board with validPoints-list(coordinates)
+02/03/2022 Vidar 1300 - 1800 Finally found the exit from the rabbit hole and completed random
+02/03/2022 Sigurd 1300 - 1800 Wrote some code convention for our current functions
+
+03/03/2022 Anton 1230 - 1630 Wrote two functions that computes next position for player. Started Project Documentation-document.
+03/03/2022 Vidar 1300 - 1630 Did some game logic
+03/03/2022 Sigurd 1230 - 1630 Coded a weak version of moving a piece in game and started on the project documentation-document
+03/03/2022 Vidar 1700 - 1800 Got stuck on Dice
+03/03/2022 Sigurd 1700 - 1800 Wrote on the documentation
+
+04/03/2022 Vidar 1700 - 1900 Fixed dice
+04/03/2022 Vidar 2100  - 2230 Fixed automatic move
+
+05/03/2022 Vidar 1600 - 1830 fixed small bugs, made it possible to step on other pieces to
+   	                                     remove them. (Probably works the same on your own color, “feature”)
+
+06/03/2022 Anton 1800 - 2000 Rereading parts of code, tweaking, comprising.
+
+07/03/2022 Vidar 1000 - 1800 Fixed final logic of winning and “killing” other pieces on board. Writing tescases.
+07/03/2022 Sigurd 0930 - 1540 Wrote logic, user-guide and shortcommings in the document.
+07/03/2022 Anton 1000-1800 Wrote function-, program documentation and background. Function specs.
