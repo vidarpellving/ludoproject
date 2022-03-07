@@ -11,24 +11,50 @@ import System.IO
 import Data.List
 import Data.Time
 
+-- Some functions examples have been omitted since Gloss-package changes the output so that it gets very tedious to both read and understand.
+-- where interesting examples with Gloss interaction are viable, they have been exaplained with text.
 
---player
+
+
+
+{- it represents the color of the player
+    a player can either be of colour red, blue green or yellow 
+    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
+-}
 data Player = PlayerRed | PlayerBlue | PlayerYellow | PlayerGreen deriving (Eq, Show)
 
---gamestate
+{- the state of the game
+    represented by being Running or GameOver, and is the typeclass of Maybe
+    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
+-}
 data StateGame = Running | GameOver (Maybe Player)
 
--- if a cell is filled with a character or not
+
+{- all of the cells on the gameboard
+    if the cell is empty its displayed as Empty and if full displayed as Full
+    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
+-}
 data Cell = Empty | Full Player deriving (Eq, Show)
 
+{- representing a dice with random values from one to six
+    randomices an Int when called or a Void when the dice value is wiped from the screen
+    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
+-}
 data Dice = Void | Dice Int deriving (Eq, Show)
 
--- board
+{- the workable board of the game
+    the board contains an array where an element is a tuple of a tuple of two Ints which is a coordinate and a Cell which can be Empty or Player
+    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
+-}
 type Board = Array (Int, Int) Cell
 
 -- this is a "Record" and creates variables for the type Game 
 -- line 21 is equal, (almost) to data Game = Game Board Player State
 
+{- represents the game
+    components: board, player, state of game, two dice-types, and an update for dice
+    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
+-}
 data Game = Game { gameBoard :: Board,
                    gamePlayer :: Player,
                    gameState :: StateGame,
@@ -36,10 +62,10 @@ data Game = Game { gameBoard :: Board,
                    dice :: Dice,
                    diceUpdate :: Bool
                  } 
--- Window
+
+-- Window specifications
 window = InWindow "Ludo" (600, 600) (100,100)
 
---background color
 backgroundColor = white
 
 screenWidth :: Int
@@ -54,12 +80,12 @@ cellWidth = fromIntegral screenWidth / fromIntegral n
 cellHeight :: Float
 cellHeight = fromIntegral screenHeight / fromIntegral n
 
---How large the board is, 15x15
+-- How large the board is, 15x15
 n :: Int
 n = 15
 
---Coordinates and curcial points; validPositions, goalSquare, winColor, entryPoint
---Total 56 possible positions before winColorRow(which contains 7 positions.)
+-- Coordinates and crucial points
+-- Total 55 possible position to the goal in (7,7)
 validPositionsRed :: [(Int,Int)]
 validPositionsRed = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8,6),(9,6),(10,6),(11,6),
                   (12,6),(13,6),(14,6),(14,7),(14,8),(13,8),(12,8),(11,8),(10,8),(9,8),(8,8),(8,9),(8,10),(8,11),
@@ -101,7 +127,6 @@ getPlayerStart _ [] = (0,0)
 getPlayerStart player ((x,y):xs) | Full player == x = y
                                  | otherwise = getPlayerStart player xs
 
-
 {- 
     this is the startboard
     Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
@@ -110,7 +135,6 @@ getPlayerStart player ((x,y):xs) | Full player == x = y
     cycle [Empty] makes an infinetly long list of the type Empty.
     zip takes two lists and combines the first second .. and last elemnts from both lists to create tuples. [(x1,y1),(x2,y2)..(xn,yn)].
     (//) takes an array and a new list to add to it, first it takes a position and then the value, in this case [((0,0), Full PlayerRed)].
-
 -}
 emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat Empty)) // [((3,3), Full PlayerRed),
                                                                                                 ((3,2), Full PlayerRed),
@@ -137,12 +161,13 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                   }
             -- This is used to define how large the array created will be
             where indexRange = ((0,0), (n-1, n-1))
--- if the game is still running
-{-
-    This function displays the different layers when the game is running
-    Determines what layers are on the bottom and on the top.
--}
 
+{- diceGen dice 
+    draws number of the dice that is rolled on the board
+    PRE: Int must be between 1 and 6
+    RETURNS: a picture corresponding the precise output of dice(input 1-6)
+    EXAMPLES: diceGen (Dice 1) == Color (RGBA 1.0 1.0 1.0 1.0) (Pictures [Translate 200.0 400.0 (ThickCircle 5.0 10.0)])
+-}
 diceGen :: Dice -> Picture
 diceGen Void = color black visualDiceBG
 diceGen dice | dice == Dice 1 = color white diceValue1
@@ -153,6 +178,12 @@ diceGen dice | dice == Dice 1 = color white diceValue1
              | dice == Dice 6 = color white diceValue6
              | otherwise = color black visualDiceBG
 
+{- boardAsRunningPicture board dice 
+    Draws everything on the board, all the player pieces, the dice and all the colored cells
+    PRE: Int must be between 1 and 6
+    RETURNS: a picture of the board with every player on the board drawn
+    EXAMPLES: when ran with only 5 different player pieces on the board it produces a picture with gloss´s function translate. An example is very tedious.
+-}       
 boardAsRunningPicture :: Board -> Dice -> Picture
 boardAsRunningPicture board dice =
     pictures [ color red redCorner,
@@ -172,7 +203,11 @@ boardAsRunningPicture board dice =
                color black boardGrid,
                diceGen dice]
 
--- colors for gameover
+{- outComeColor player
+    translates the playercolour to a RGBA-value
+    RETURNS: the color of the player
+    EXAMPLES: outComeColor (Just PlayerRed) == RGBA 1.0 0.0 0.0 1.0
+-}  
 outcomeColor :: Maybe Player -> Color 
 outcomeColor (Just PlayerRed) = red
 outcomeColor (Just PlayerBlue) = blue
@@ -180,12 +215,17 @@ outcomeColor (Just PlayerYellow) = yellow
 outcomeColor (Just PlayerGreen) = green
 outcomeColor Nothing = white
 
--- put the pieces in the cell
+{- snapPictureToCell picture point
+    translates the picture to a specific coordinate on the board
+    RETURNS: the color of the player
+    EXAMPLES: snapPictureToCell redCell (6,2) == Translate 100.0 260.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0))
+-}  
 snapPictureToCell :: Picture -> (Int, Int) -> Picture
 snapPictureToCell picture (row, column) = translate x y picture
     where x = fromIntegral column * cellWidth + cellWidth * 0.5
           y = fromIntegral row * cellHeight + cellHeight * 0.5
 
+-- variables to paint the cells in specific colours
 redCell :: Picture
 redCell = color red $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
@@ -206,7 +246,10 @@ boarderCell :: Picture
 boarderCell = color black $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.81
 
--- the cells of the board
+{- cellsOfBoard board cell cellPicture
+    produces a picture with cells with points drawn
+    RETURNS: a picture with points on
+-}
 cellsOfBoard :: Board -> Cell -> Picture -> Picture
 cellsOfBoard board cell cellPicture = pictures
     $ map (snapPictureToCell cellPicture . fst)
@@ -214,8 +257,27 @@ cellsOfBoard board cell cellPicture = pictures
     $ assocs board
 
 --makes the cells the color of the player
+{- redCellsOfBoard board
+    draws multiple circles on given coordiantes of the colour declared as argument
+    this specification is the same for every following function that goes from Board -> Picture.
+    RETURNS: a picture of a multiple red circles on the board and their position
+    EXAMPLES: redCellsOfBoard (gameBoard emptyBoard) == Pictures [Translate 100.0 100.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0)),
+                                                                  Translate 140.0 100.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0)),
+                                                                  Translate 100.0 140.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0)),
+                                                                  Translate 140.0 140.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0))]
+-}
 redCellsOfBoard :: Board -> Picture
 redCellsOfBoard board = cellsOfBoard board (Full PlayerRed) redCell
+
+{- redBoarder board
+    this specification is the same for every following function that goes from Board -> Picture.
+    draws four borders of declared colour on coordinates on the board
+    RETURNS: a picture with colored lines forming a rectangle
+    EXAMPLES: redBoarder (gameBoard emptyBoard) == Pictures [Translate 100.0 100.0 (Color (RGBA 0.0 0.0 0.0 1.0) (ThickCircle 1.0 32.4)),
+                                                             Translate 140.0 100.0 (Color (RGBA 0.0 0.0 0.0 1.0) (ThickCircle 1.0 32.4)),
+                                                             Translate 100.0 140.0 (Color (RGBA 0.0 0.0 0.0 1.0) (ThickCircle 1.0 32.4)),
+                                                             Translate 140.0 140.0 (Color (RGBA 0.0 0.0 0.0 1.0) (ThickCircle 1.0 32.4))]
+-}
 redBoarder :: Board -> Picture
 redBoarder board = cellsOfBoard board (Full PlayerRed) boarderCell
 
@@ -244,6 +306,9 @@ greenBoarder board = cellsOfBoard board (Full PlayerGreen) boarderCell
                                                  (fromIntegral screenWidth, i * cellHeight)]])
                                                  on the list [0.0 .. fromIntegral n] which is a list of float [0.0,1.0 .. 15.0]
 -}
+{- boardGrid
+    helper-variable that fills the use of showing where lines are drawn on the picture
+-}
 boardGrid :: Picture
 boardGrid = pictures $ concatMap (\i -> [ line [ (i * cellWidth, 0.0),
                                                  (i * cellWidth, fromIntegral screenHeight)],
@@ -251,7 +316,7 @@ boardGrid = pictures $ concatMap (\i -> [ line [ (i * cellWidth, 0.0),
                                                  (fromIntegral screenWidth, i * cellHeight)]])
                                                  [0.0 .. fromIntegral n]
 
--- Only works when the gameState = GameOver
+-- variable for all the bases of the colours
 redCorner :: Picture
 redCorner = pictures [translate 120 120 (rectangleSolid 240 240),
                       translate 260 60 (rectangleSolid 40 40),
@@ -282,15 +347,16 @@ whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
                         translate 120 480 (rectangleSolid 160 160),
                         translate 480 480 (rectangleSolid 160 160)]
 
------------- DICE --------
+-- dice
 visualDiceBG :: Picture
 visualDiceBG = pictures [translate 200 400 (rectangleSolid 80 80)]
+
 diceValue1 :: Picture
 diceValue1 = pictures [translate 200 400 (thickCircle 5 10)]
+
 diceValue2 :: Picture
 diceValue2 = pictures [translate 180 380 (thickCircle 5 10),
-                       translate 220 420 (thickCircle 5 10)
-                      ]
+                       translate 220 420 (thickCircle 5 10)]
 diceValue3 :: Picture
 diceValue3 = pictures [translate 200 400 (thickCircle 5 10),
                        translate 180 380 (thickCircle 5 10),
@@ -300,7 +366,6 @@ diceValue4 = pictures [translate 180 380 (thickCircle 5 10),
                        translate 220 420 (thickCircle 5 10),
                        translate 180 420 (thickCircle 5 10),
                        translate 220 380 (thickCircle 5 10)]
-
 
 diceValue5 :: Picture
 diceValue5 = pictures [translate 200 400 (thickCircle 5 10),
@@ -316,10 +381,11 @@ diceValue6 = pictures [translate 180 380 (thickCircle 5 10),
                        translate 180 400 (thickCircle 5 10),
                        translate 220 400 (thickCircle 5 10)
                        ]
-{- 
-    layers for each player and the grid.
-    each color has a function for displaying itself
-    boardGrid draws the lines for the grid
+
+{- boardAsPciture board
+    makes all the lines, circles and players drawn on the board
+    RETURNS: the whole gameboard animated in Gloss
+    EXAMPLES: boardAsPciture (gameBoard emptyBoard), can be ran and will print the whole gameboard with all its colored paths and bases for the different colours, including their coordinates
 -}
 boardAsPicture :: Board -> Picture
 boardAsPicture board =
@@ -335,11 +401,6 @@ boardAsPicture board =
                boardGrid
              ]
 
-{-
-    Color takes two arguments Color and a board.
-    outcomeColor winner gets the color of the winner.
-    boardAsPicture board draws the board
--}
 boardAsGameOverPicture :: Maybe Player -> Board -> Picture
 boardAsGameOverPicture winner board = color (outcomeColor winner) (boardAsPicture board)
 
