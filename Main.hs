@@ -104,6 +104,7 @@ winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 entryPoints :: [(Cell, (Int,Int))]
 entryPoints = [(Full PlayerRed,(6,2)),(Full PlayerGreen,(12,6)),(Full PlayerYellow,(8,12)),(Full PlayerBlue,(2,8))]
 
+-- returns the first position that has that player in it, it has been paired with entryPoints so it just returnsthe coords for that player
 getPlayerStart :: Player -> [(Cell, (Int,Int))] -> (Int,Int)
 getPlayerStart _ [] = (0,0)
 getPlayerStart player ((x,y):xs) | Full player == x = y
@@ -181,6 +182,7 @@ boardAsRunningPicture board dice =
                diceGen dice]
 
 -- colors for gameover
+outcomeColor :: Maybe Player -> Color 
 outcomeColor (Just PlayerRed) = red
 outcomeColor (Just PlayerBlue) = blue
 outcomeColor (Just PlayerYellow) = yellow
@@ -188,6 +190,7 @@ outcomeColor (Just PlayerGreen) = green
 outcomeColor Nothing = white
 
 -- put the pieces in the cell
+snapPictureToCell :: Picture -> (Int, Int) -> Picture
 snapPictureToCell picture (row, column) = translate x y picture
     where x = fromIntegral column * cellWidth + cellWidth * 0.5
           y = fromIntegral row * cellHeight + cellHeight * 0.5
@@ -498,18 +501,27 @@ playerTurn game cellCoord
     -- if there is already a piece on that coord the piece disapears
     -- but it does not reappear in the respective spawnpoint
     | isCoordCorrect cellCoord && board ! cellCoord == Full player && dic == Dice 6 && diceU == True && isInSpawn cellCoord player
-        && board ! (getPlayerStart player entryPoints) /= Full player
-        = playerSwitch $ game { gameBoard = board // [(cellCoord, Empty),((getPlayerStart player entryPoints), Full player)],
+        = let entryPoint = getPlayerStart player entryPoints
+        in if board ! entryPoint /= Full player 
+            then if board ! entryPoint == Empty 
+                then playerSwitch $ game { gameBoard = board // [(cellCoord, Empty),(entryPoint, Full player)],
                                 diceUpdate = False,
                                 rnd = drop 1 (rnd game),
                                 dice = Void}
+                else playerSwitch $ game { gameBoard = board // [(cellCoord, Empty),(entryPoint, Full player),
+                (emptySpawnPoint board (cellConverter $ board ! entryPoint),board ! entryPoint)],
+                                diceUpdate = False,
+                                rnd = drop 1 (rnd game),
+                                dice = Void}
+            else game
+            
     -- function for the winning row
     | isCoordCorrect cellCoord && board ! cellCoord == Full player && diceU == True && isInWinRow cellCoord player
         = if getNextPosWin cellCoord dic player == (7,7) 
-            then if snd (head (findPlayersPos (assocs board) player)) == Full player then game {gameState = GameOver (Just player),
-                                                                                                gameBoard = board // [(cellCoord, Empty)],
-                                                                                                rnd = drop 1 (rnd game),
-                                                                                                dice = Void}
+            then if (length (findPlayersPos (assocs board) player)) == 1 then game {gameState = GameOver (Just player),
+                                                                                    gameBoard = board // [(cellCoord, Empty)],
+                                                                                    rnd = drop 1 (rnd game),
+                                                                                    dice = Void}
                 else 
                     playerSwitch $ game { gameBoard = board // [(cellCoord, Empty)],
                                 diceUpdate = False,
@@ -580,3 +592,10 @@ main :: IO ()
 main = do
     time <- timeGen
     play window backgroundColor 30 (emptyBoard {rnd = randoms (mkStdGen time)}) gameAsPicture transformGame (const id)
+
+
+------------------ TEST CASES ---------------------
+
+-- test1 = TestCase $ assertEqual 
+
+-- runtests = runTestTT $ TestList [test1,test2]
