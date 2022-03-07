@@ -21,8 +21,6 @@ data Cell = Empty | Full Player deriving (Eq, Show)
 
 data Dice = Void | Dice Int deriving (Eq, Show)
 
-data Move = None | Piece (Int, Int) deriving (Eq, Show)
-
 -- board
 type Board = Array (Int, Int) Cell
 
@@ -34,8 +32,7 @@ data Game = Game { gameBoard :: Board,
                    gameState :: State,
                    rnd :: [Float],
                    dice :: Dice,
-                   diceUpdate :: Bool,
-                   pieceMove :: Move
+                   diceUpdate :: Bool
                  }
 -- Window
 window = InWindow "Ludo" (600, 600) (100,100)
@@ -58,11 +55,6 @@ cellHeight = fromIntegral screenHeight / fromIntegral n
 --How large the board is, 15x15
 n :: Int
 n = 15
-validPositions :: [(Int, Int)]
-validPositions = [(6,2),(6,1),(6,0),(7,0),(8,0),(8,1),(8,2),(8,3),(8,4),(8,5),(8,6),(9,6),(10,6),(11,6),
-                  (12,6),(13,6),(14,6),(14,7),(14,8),(13,8),(12,8),(11,8),(10,8),(9,8),(8,8),(8,9),(8,10),(8,11),
-                  (8,12),(8,13),(8,14),(7,14),(6,14),(6,13),(6,12),(6,11),(6,10),(6,9),(6,8),(5,8),(4,8),(3,8),
-                  (2,8),(1,8),(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6),(6,6),(6,5),(6,4),(6,3)]
 
 --Coordinates and curcial points; validPositions, goalSquare, winColor, entryPoint
 --Total 56 possible positions before winColorRow(which contains 7 positions.)
@@ -96,12 +88,6 @@ redSpawn = [(2,2),(3,2),(3,3),(2,3)]
 blueSpawn = [(2,11),(3,11),(3,12),(2,12)]
 greenSpawn = [(11,2),(12,2),(12,3),(11,3)]
 yellowSpawn = [(11,11),(12,11),(12,12),(11,12)]
-
--- the squares that are limited to their colors
-winColorGreen = [(8,1),(7,1),(7,2),(7,3),(7,4),(7,5),(7,6)]
-winColorYellow = [(13,8),(13,7),(12,7),(11,7),(10,7),(9,7),(8,7)]
-winColorBlue = [(6,13),(7,13),(7,12),(7,11),(7,10),(7,9),(7,8)]
-winColorRed = [(1,6),(1,7),(2,7),(3,7),(4,7),(5,7),(6,7)]
 
 --entrypoints for all colors
 entryPoints :: [(Cell, (Int,Int))]
@@ -144,8 +130,7 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                     gameState = Running,
                     rnd = randoms (mkStdGen 42),
                     dice = Void,
-                    diceUpdate = False,
-                    pieceMove = None
+                    diceUpdate = False
                   }
             -- This is used to define how large the array created will be
             where indexRange = ((0,0), (n-1, n-1))
@@ -371,14 +356,11 @@ isCoordCorrect :: (Int, Int) -> Bool
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
 
-
-
 {- findPlayersPos (assocs(gameBoard emptyBoard)) player
 
     RETURNS : list of players of desired color
     EXAMPLE : findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)]
 -}
-
 findPlayersPos :: [((Int,Int), Cell)] -> Player ->[((Int,Int), Cell)]
 findPlayersPos [] _ = []
 findPlayersPos (((_,_), Empty):xs) player = findPlayersPos xs player
@@ -406,7 +388,6 @@ fromJust :: Maybe a -> a
 fromJust Nothing = error "Maybe.fromJust: Nothing"
 fromJust (Just x) = x
 
-<<<<<<< HEAD
 -- gets the valid positions of that player
 playerValidPositions :: Player -> [(Int,Int)]
                             -- wrong, need to remove (2,6) -> (6,3)
@@ -414,11 +395,8 @@ playerValidPositions player | player == PlayerRed = validPositionsRed
                             | player == PlayerBlue = validPositionsBlue
                             | player == PlayerGreen = validPositionsGreen
                             | player == PlayerYellow = validPositionsYellow
-                            | otherwise = validPositions
 
 -- get the first spawnPoint that is not empty for that player
-=======
->>>>>>> c65d3563268d71e354ae7204a453651194897fc9
 spawnPoint :: [((Int,Int), Cell)] -> Player -> ((Int,Int),Cell)
 spawnPoint [] _ = ((7,7),Empty)
 spawnPoint ((x,y):xs) player =  ((spawnPointCords (findPlayersPos ((x,y):xs) player) player), Empty)
@@ -439,7 +417,6 @@ checkSpawnPoints board player | player == PlayerRed = map (\i -> (!) board i) re
                               | player == PlayerGreen = map (\i -> (!) board i) greenSpawn
                               | player == PlayerYellow = map (\i -> (!) board i) yellowSpawn
                               | otherwise = [Empty,Empty,Empty,Empty]
-<<<<<<< HEAD
 -- reutrns the coords of the first empty spawnpoint for that player
 emptySpawnPoint :: Board -> Player -> (Int,Int)
 emptySpawnPoint board player | player == PlayerRed = redSpawn !! whenIsEmpty (checkSpawnPoints board player) 0
@@ -453,8 +430,6 @@ whenIsEmpty :: [Cell] -> Int -> Int
 whenIsEmpty [] acc = acc
 whenIsEmpty (x:xs) acc | x == Empty = acc
                        | otherwise = whenIsEmpty xs acc+1
-=======
->>>>>>> c65d3563268d71e354ae7204a453651194897fc9
 
 -- returns an list of empty if the spawnpoint of a player is empty
 isSpawnEmpty :: Board -> Player -> Bool 
@@ -501,7 +476,6 @@ playerTurn game cellCoord
                                 rnd = drop 1 (rnd game),
                                 dice = Void}
     -- pick which piece to move
-<<<<<<< HEAD
     -- crashes if cellCoord + dic becomes something outside the arrayrange
     -- you can kill your own piece if you walk on it (maybe feature)
     -- cannot do anything if you have no players on the field and your spawnpoint does not have 4 pieces
@@ -514,10 +488,6 @@ playerTurn game cellCoord
     else 
         playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player),
         (emptySpawnPoint board (cellConverter(board ! (getNextPos cellCoord dic player))),board ! (getNextPos cellCoord dic player))],
-=======
-    | isCoordCorrect cellCoord && board ! cellCoord == Full player && diceU == True && elem cellCoord validPositions 
-    = playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic, Full player)],
->>>>>>> c65d3563268d71e354ae7204a453651194897fc9
                            rnd = drop 1 (rnd game),
                            diceUpdate = False,
                            dice = Void}
@@ -536,7 +506,6 @@ playerTurn game cellCoord
           player = gamePlayer game
           diceU = diceUpdate game
           dic = dice game
-          pieceM = pieceMove game
 
 mousePosCell :: (Float,Float) -> (Int,Int)
 mousePosCell (x,y) = ( floor ((y + (fromIntegral screenHeight * 0.5)) / cellHeight)
