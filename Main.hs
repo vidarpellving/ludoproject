@@ -19,14 +19,12 @@ import Data.Time
 
 {- it represents the color of the player
     a player can either be of colour red, blue green or yellow 
-    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
 -}
 data Player = PlayerRed | PlayerBlue | PlayerYellow | PlayerGreen deriving (Eq, Show)
 
 
 {- the state of the game
     represented by being Running or GameOver, and is the typeclass of Maybe
-    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
 -}
 
 --gamestate
@@ -35,20 +33,17 @@ data StateGame = Running | GameOver (Maybe Player) deriving (Eq, Show)
 
 {- all of the cells on the gameboard
     if the cell is empty its displayed as Empty and if full displayed as Full
-    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
 -}
 data Cell = Empty | Full Player deriving (Eq, Show)
 
 {- representing a dice with random values from one to six
     randomices an Int when called or a Void when the dice value is wiped from the screen
-    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
 -}
 data Dice = Void | Dice Int deriving (Eq, Show)
 
 
 {- the workable board of the game
     the board contains an array where an element is a tuple of a tuple of two Ints which is a coordinate and a Cell which can be Empty or Player
-    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
 -}
 type Board = Array (Int, Int) Cell
 
@@ -57,7 +52,6 @@ type Board = Array (Int, Int) Cell
 
 {- represents the game
     components: board, player, state of game, two dice-types, and an update for dice
-    HAAAAAAAAAAAAAAAINVARIANT:  ... a predicate on elements of the datatype that the code preserves at all times ...
 -}
 data Game = Game { gameBoard :: Board,
                    gamePlayer :: Player,
@@ -405,11 +399,20 @@ boardAsPicture board =
                boardGrid
              ]
 
+{- boardAsGameOverPicture winner board
+    produces a picture when the game is over with the color of the winner
+    RETURNS: A picture 
+    EXAMPLE: boardAsGameOverPicture (Just PlayerRed) emptyBoard = a red game screen
+-}
 boardAsGameOverPicture :: Maybe Player -> Board -> Picture
 boardAsGameOverPicture winner board = color (outcomeColor winner) (boardAsPicture board)
 
 
---Translate the board, this is the way to handle events.
+{- gameAsPicture game
+    Translate the game and turns it into a picture
+    RETURNS: Picture of game
+    EXAMPLE: gameAsPicture emptyBoard = Omitted
+-}
 gameAsPicture :: Game -> Picture
 gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
                                (fromIntegral screenHeight * (-0.5))
@@ -419,17 +422,26 @@ gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
             Running -> boardAsRunningPicture (gameBoard game) (dice game)
             GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
 
--- generates a random integer between 1 to 6
+{- rndNumGen rnd
+    generates a random integer between 1 to 6
+    PRE: Float is between 0 and 1
+    RETURNS: Int
+    EXAMPLE: rndNumGen [0.9123] = 6
+-}
 rndNumGen :: [Float] -> Int
 rndNumGen rnd = truncate (head rnd*6+1)
--- returns True if the tuple is inside the board and False if it is outside
+{- isCoordCorrect point
+    returns True if the tuple is inside the board and False if it is outside
+    RETURNS: True or false
+    EXAMPLE: isCoordCorrect (1,14) = True, isCoordCorrect (15,15) = False
+    -}
 isCoordCorrect :: (Int, Int) -> Bool
 isCoordCorrect = inRange ((0,0),(n-1,n-1))
 
 
 
 {- findPlayersPos (assocs(gameBoard emptyBoard)) player
-
+    finds the coordinates for all the player 
     RETURNS : list of players of desired color
     EXAMPLE : findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed == [((1,6),Full PlayerRed),((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)]
 -}
@@ -442,7 +454,7 @@ findPlayersPos array@((x,y):xs) player
 
 {- getNextPos lst point
     Gives the next possible position from a given point on the board
-    RETURNS  :
+    RETURNS  : Coordinates on the array as (Int,Int)
     EXAMPLES :  getNextPos validPositions (12,6) == (13,6)
                 getNextPos validPositions (14,6) == (14,7)
 -}
@@ -450,11 +462,20 @@ getNextPos ::  (Int, Int) -> Dice -> Player -> (Int, Int)
 getNextPos point dice player = let positions = playerValidPositions player
                                 in positions !! (fromJust (elemIndex point positions) + diceConverter dice)
 
--- returns the next position for that player on the winrow
+{- getNextPosWin point dice player
+    Gives the next position for that player on their respective winning row
+    RETURNS: Coordinates in the array as (Int,Int)
+    EXAMPLE: getNextPosWin (7,5) (Dice 4) PlayerRed = (7,5)
+-}
 getNextPosWin :: (Int,Int) -> Dice -> Player -> (Int, Int)
 getNextPosWin point dice player = let positions = (drop 48 (playerValidPositions player) ++ drop 1 (reverse (drop 49 (playerValidPositions player))))
                                     in  positions !! (fromJust (elemIndex point positions) + diceConverter dice)
--- returns True if the player is on their winning row and False if not
+
+{- isInWinRow point player
+    checks if a piece of a player is in their winning row
+    RETURNS: True or False
+    EXAMPLE: isInWinRow (7,5) PlayerRed = True
+-}
 isInWinRow :: (Int,Int) -> Player -> Bool
 isInWinRow point player = point `elem` drop 48 (playerValidPositions player)
 
@@ -468,7 +489,11 @@ fromJust :: Maybe a -> a
 fromJust Nothing = error "Maybe.fromJust: Nothing"
 fromJust (Just x) = x
 
--- gets the valid positions of that player
+{- playerValidPositions player
+    Gives a list of positions that the player can move on
+    RETURNS: List of (Int,Int)
+    EXAMPLE: playerValidPositions PlayerBlue = validPositionsBlue
+-}
 playerValidPositions :: Player -> [(Int,Int)]
 playerValidPositions player | player == PlayerRed = validPositionsRed
                             | player == PlayerBlue = validPositionsBlue
@@ -476,18 +501,30 @@ playerValidPositions player | player == PlayerRed = validPositionsRed
                             | player == PlayerYellow = validPositionsYellow
                             | otherwise = validPositionsRed
 
--- checks if the spawnpoints are empty or not, returns a list of either [Full PlayerRed,Empty,Full PlayerRed,Full PlayerRed]
+{- checkSpawnPoints board player
+    gives a list of the conditions of the spawnPoints for a player
+    RETURNS: List of Player
+    EXAMPLE: checkSpawnPoints (gameBoard emptyBoard) PlayerRed = [Full PlayerRed,Full PlayerRed,Full PlayerRed,Full PlayerRed]
+-}
 checkSpawnPoints :: Board -> Player -> [Cell]
 checkSpawnPoints board player | player == PlayerRed = map (\i -> (!) board i) redSpawn
                               | player == PlayerBlue = map (\i -> (!) board i) blueSpawn
                               | player == PlayerGreen = map (\i -> (!) board i) greenSpawn
                               | player == PlayerYellow = map (\i -> (!) board i) yellowSpawn
                               | otherwise = [Empty,Empty,Empty,Empty]
--- same as function above without empty
+{- checkSpawnPointsWithoutEmpty board player
+    gives a list of the conditions of the spawnPoints for a player with Empty removed
+    RETURNS: List of Player
+    EXAMPLE: checkSpawnPointsWithoutEmpty (gameBoard emptyBoard) PlayerRed = [Full PlayerRed,Full PlayerRed,Full PlayerRed,Full PlayerRed]
+-}
 checkSpawnPointsWithoutEmpty :: Board -> Player -> [Cell]
 checkSpawnPointsWithoutEmpty board player = filter (/= Empty) (checkSpawnPoints board player)
 
--- reutrns the coords of the first empty spawnpoint for that player
+{- emptySpawnPoint board player
+    checks the spawnpoints for the player and returns the coords of the first empty spawnpoint
+    RETURNS: (Int,Int)
+    EXAMPLE: emptySpawnPoint ((gameBoard emptyBoard) // [((3,3), Empty)]) PlayerRed = (3,3)
+ -}
 emptySpawnPoint :: Board -> Player -> (Int,Int)
 emptySpawnPoint board player | player == PlayerRed = redSpawn !! whenIsEmpty (checkSpawnPoints board player) 0
                              | player == PlayerBlue = blueSpawn !! whenIsEmpty (checkSpawnPoints board player) 0
@@ -495,20 +532,34 @@ emptySpawnPoint board player | player == PlayerRed = redSpawn !! whenIsEmpty (ch
                              | player == PlayerYellow = yellowSpawn !! whenIsEmpty (checkSpawnPoints board player) 0
                              | otherwise = (7,7)
 
--- returns an integer for the first empty Spawnpoint
+{- whenIsEmpty cells acc
+    returns an integer for the first empty Spawnpoint
+    RETURNS: integer representing how many non-Empty cells that has come before the Empty one
+    EXAMPLE: whenIsEmpty [Full PlayerRed, Empty, Full PlayerRed, Empty] 0 = 1
+-}
 whenIsEmpty :: [Cell] -> Int -> Int
 whenIsEmpty [] acc = acc
 whenIsEmpty (x:xs) acc | x == Empty = acc
                        | otherwise = whenIsEmpty xs acc+1
 
--- returns an list of empty if the spawnpoint of a player is empty
+{- isSpawnEmpty board player
+    Checks if the spawn is empty of a player
+    RETURNS: True or False
+    EXAMPLE: isSpawnEmpty (gameBoard emptyBoard) PlayerRed = False
+-} 
 isSpawnEmpty :: Board -> Player -> Bool
 isSpawnEmpty board player | player == PlayerRed && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
                          | player == PlayerBlue && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
                          | player == PlayerGreen && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
                          | player == PlayerYellow && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
                          | otherwise = False
--- checks if a coord is in the spawnpoint for that player
+
+
+{- isInSpawn coords player
+    checks if a coordinate of the board is in the spawnpoint for that player
+    RETURNS: True or False
+    EXAMPLE: isInSpawn (3,3) PlayerRed = True, isInSpawn (7,7) PlayerRed = False
+-}
 isInSpawn :: (Int, Int) -> Player -> Bool
 isInSpawn coords player = case player of
     PlayerRed -> elem coords redSpawn
@@ -516,21 +567,31 @@ isInSpawn coords player = case player of
     PlayerGreen -> elem coords greenSpawn
     PlayerYellow -> elem coords yellowSpawn
 
--- converts dice to an int
+{- diceConverter Dice
+    converts the data type Dice into an Int
+    RETURNS: An Int
+    EXAMPLE: diceConverter (Dice 5) = 5
+-}
 diceConverter :: Dice -> Int
 diceConverter Void = 0
 diceConverter (Dice x) = x
 
--- converts Cell to Player
+{- cellConverter Cell
+    converts a Cell into the Datatype Player
+    PRE: Cell contains a Player and not Empty
+    RETURNS: The Player of a cell
+    EXAMPLE: cellConverter ((1,1), Full PlayerGreen) = PlayerGreen
+-}
 cellConverter :: Cell -> Player
-cellConverter Empty = PlayerRed
 cellConverter (Full player) = player
 
--- Probably takes the position of the clicked player and then checks wich position that is in the valid positions
--- then adds the dice to that number and checks the validPositions what the coords is for that number.
 
 
-
+{- playerSwitch game
+    Changes the player of the game in the order Red -> Green -> Yellow -> Blue in a circle
+    RETURNS: a game with updated gamePlayer
+    EXAMPLE: playerSwitch emptyBoard = emptyBoard {gamePlayer = PlayerGreen}
+-}
 playerSwitch :: Game -> Game
 playerSwitch game =
     case gamePlayer game of
