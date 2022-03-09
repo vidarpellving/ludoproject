@@ -38,12 +38,14 @@ data Cell = Empty | Full Player deriving (Eq, Show)
 
 {- representing a dice with random values from one to six
     randomices an Int when called or a Void when the dice value is wiped from the screen
+    INVARIANT: Int is between 1-6
 -}
 data Dice = Void | Dice Int deriving (Eq, Show)
 
 
 {- the workable board of the game
     the board contains an array where an element is a tuple of a tuple of two Ints which is a coordinate and a Cell which can be Empty or Player
+    INVARIANT: Int is between 0-14
 -}
 type Board = Array (Int, Int) Cell
 
@@ -108,7 +110,6 @@ validPositionsBlue = [(2,8),(1,8),(0,8),(0,7),(0,6),(1,6),(2,6),(3,6),(4,6),(5,6
 --dice position
 dicePos = [(9,4),(9,5),(10,4),(10,5)]
 
-goalSquare = [(7,7)]
 -- spawnpoints for all the colors
 redSpawn = [(2,2),(3,2),(3,3),(2,3)]
 blueSpawn = [(2,11),(3,11),(3,12),(2,12)]
@@ -127,7 +128,7 @@ getPlayerStart player ((x,y):xs) | Full player == x = y
 
 {- 
     this is the startboard
-    Array takes and a range named which is defined as indexRange on line 58 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
+    Array takes and a range named which is defined as indexRange on line 160 and a list [((0,0),Empty),((0,1),Empty)..((14,14),Empty)] 
     and makes it an array.
     range indexRange makes a list filled with tuples, [(0,0),(0,1)..(14,14)].
     cycle [Empty] makes an infinetly long list of the type Empty.
@@ -377,8 +378,7 @@ diceValue6 = pictures [translate 180 380 (thickCircle 5 10),
                        translate 180 420 (thickCircle 5 10),
                        translate 220 380 (thickCircle 5 10),
                        translate 180 400 (thickCircle 5 10),
-                       translate 220 400 (thickCircle 5 10)
-                       ]
+                       translate 220 400 (thickCircle 5 10)]
 
 {- boardAsPciture board
     makes all the lines, circles and players drawn on the board
@@ -600,12 +600,19 @@ playerSwitch game =
         PlayerYellow -> game {gamePlayer = PlayerBlue}
         PlayerBlue -> game {gamePlayer = PlayerRed}
 
+
+{- playerTurn game coord
+    Updates the game depending on where you click
+    RETURNS: Game 
+    EXAMPLE: playerTurn emptyBoard {gamePlayer = PlayerBlue, gameState = Running, rnd = randoms (mkStdGen 42), dice = Dice 6, diceUpdate = True} (2,11) = playerTurn emptyBoard {gamePlayer = PlayerBlue, gameState = Running, rnd = randoms (mkStdGen 42), dice = Dice 6, diceUpdate = True} (2,11)
+    = Game {gameBoard = emptyBoard // [((2,11),Empty),((2,8),Full PlayerBlue)], gamePlayer = PlayerRed, gameState = Running, rnd = [infinity]
+-}
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
     -- removes spawn piece and puts it in the entrypoint
     -- if there is already a piece on that coord the piece disapears
     -- but it does not reappear in the respective spawnpoint
-    | isCoordCorrect cellCoord && board ! cellCoord == Full player && dic == Dice 6 && diceU == True && isInSpawn cellCoord player
+    | isCoordCorrect cellCoord && board ! cellCoord == Full player && dic == Dice 6 && diceU && isInSpawn cellCoord player
         = let entryPoint = getPlayerStart player entryPoints
         in if board ! entryPoint /= Full player 
             then if board ! entryPoint == Empty 
@@ -675,24 +682,41 @@ playerTurn game cellCoord
           diceU = diceUpdate game
           dic = dice game
 
+{- mousePosCell (x,y)
+    Takes position of mouse and returns the respective cell 
+    RETURNS: (Int,Int) where Int is between 0-14
+    EXAMPLE: mousePosCell (37.0,40.0) = (8,8)
+-}
 mousePosCell :: (Float,Float) -> (Int,Int)
 mousePosCell (x,y) = ( floor ((y + (fromIntegral screenHeight * 0.5)) / cellHeight)
                      , floor ((x + (fromIntegral screenWidth * 0.5)) / cellWidth )
                      )
 
+
+{- transformGame event game
+    When leftclick you update the game
+    RETURNS: game
+    EXAMPLE: transformGame (mouseclick) emptyBoard = playerTurn game (coords of click)
+-}
 transformGame :: Event -> Game -> Game
 transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
     case gameState game of
         Running -> playerTurn game $ mousePosCell mousePos
         GameOver _ -> emptyBoard
 transformGame _ game = game
-
+{- timeGen
+    Generatates the current time in seconds
+    RETURN: IO Int
+    EXAMPLE: timeGen at (11:46) = 38809
+-}
 timeGen :: IO Int
 timeGen = do
    currTime <- getCurrentTime
    let time = floor $ utctDayTime currTime :: Int
    return time
-
+{- main
+    Calls function of timeGen and runs the gloss function play 
+-}
 main :: IO ()
 main = do
     time <- timeGen
