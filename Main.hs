@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use infix" #-}
 module Main where
 
 import Test.HUnit
@@ -24,17 +26,18 @@ data Player = PlayerRed | PlayerBlue | PlayerYellow | PlayerGreen deriving (Eq, 
 
 
 {- the state of the game
-    represented by being Running or GameOver, and is the typeclass of Maybe
+    represented by being Start, Running or GameOver, and is the typeclass of Maybe
 -}
 
 --gamestate
-data StateGame = Running | GameOver (Maybe Player) deriving (Eq, Show)
+data StateGame = Running | GameOver (Maybe Player) | Start | Settings deriving (Eq, Show)
 
 
 {- all of the cells on the gameboard
-    if the cell is empty its displayed as Empty and if full displayed as Full
+    if the cell is empty its displayed as Empty and if full displayed as Full, When there are two player pieces on top of eachother
+    it becomes a stack
 -}
-data Cell = Empty | Full Player deriving (Eq, Show)
+data Cell = Empty | Full Player | Stack Player deriving (Eq, Show)
 
 {- representing a dice with random values from one to six
     randomices an Int when called or a Void when the dice value is wiped from the screen
@@ -60,7 +63,9 @@ data Game = Game { gameBoard :: Board,
                    gameState :: StateGame,
                    rnd :: [Float],
                    dice :: Dice,
-                   diceUpdate :: Bool
+                   diceUpdate :: Bool,
+                   players :: [Player],
+                   startPic :: [Picture]
                  } deriving (Eq, Show)
 
 -- Window specifications
@@ -135,6 +140,7 @@ getPlayerStart player ((x,y):xs) | Full player == x = y
     zip takes two lists and combines the first second .. and last elemnts from both lists to create tuples. [(x1,y1),(x2,y2)..(xn,yn)].
     (//) takes an array and a new list to add to it, first it takes a position and then the value, in this case [((0,0), Full PlayerRed)].
 -}
+emptyBoard :: Game
 emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat Empty)) // [((3,3), Full PlayerRed),
                                                                                                 ((3,2), Full PlayerRed),
                                                                                                 ((2,2), Full PlayerRed),
@@ -153,10 +159,12 @@ emptyBoard = Game { gameBoard = array indexRange (zip (range indexRange) (repeat
                                                                                                 ((11,3), Full PlayerGreen)],
 
                     gamePlayer = PlayerRed,
-                    gameState = Running,
+                    gameState = Start,
                     rnd = randoms (mkStdGen 42),
                     dice = Void,
-                    diceUpdate = False
+                    diceUpdate = False,
+                    players = [PlayerRed, PlayerGreen, PlayerYellow, PlayerBlue],
+                    startPic = [Blank]
                   }
             -- This is used to define how large the array created will be
             where indexRange = ((0,0), (n-1, n-1))
@@ -177,37 +185,50 @@ diceGen dice | dice == Dice 1 = color white diceValue1
              | dice == Dice 6 = color white diceValue6
              | otherwise = color black visualDiceBG
 
+{-- loads the settingspage for main-}
+settingsPageLoader :: IO Picture
+settingsPageLoader = loadBMP "/Users/vidar/Documents/Coding Macbook/haskell/glosstest/app/startPicture.bmp"
+
 {- boardAsRunningPicture board dice 
     Draws everything on the board, all the player pieces, the dice and all the colored cells
     PRE: Int must be between 1 and 6
     RETURNS: a picture of the board with every player on the board drawn
     EXAMPLES: when ran with only 5 different player pieces on the board it produces a picture with gloss´s function translate. An example is very tedious.
--}       
-boardAsRunningPicture :: Board -> Dice -> Picture
-boardAsRunningPicture board dice =
+-}
+boardAsRunningPicture :: Game -> Picture
+boardAsRunningPicture game  =
+            -- corners of the board
     pictures [ color red redCorner,
                color blue blueCorner,
                color yellow yellowCorner,
                color green greenCorner,
                color white whiteSquare,
-               redBoarder board,
-               blueBoarder board,
-               yellowBoarder board,
-               greenBoarder board,
+            -- stacked cells that are squares
+               redStackedCell board,
+               greenStackedCell board,
+               yellowStackedCell board,
+               blueStackedCell board,
+            -- all pieces that are round
                redCellsOfBoard board,
                blueCellsOfBoard board,
                yellowCellsOfBoard board,
                greenCellsOfBoard board,
+               --shows what player is currently playing
+               visualPlayer $ gamePlayer game,
+               -- the dice background
                color black visualDiceBG,
+               -- the grid
                color black boardGrid,
-               diceGen dice]
+               -- the dice
+               diceGen $ dice game]
+               where board = gameBoard game
 
 {- outComeColor player
     translates the playercolour to a RGBA-value
     RETURNS: the color of the player
     EXAMPLES: outComeColor (Just PlayerRed) == RGBA 1.0 0.0 0.0 1.0
--}  
-outcomeColor :: Maybe Player -> Color 
+-}
+outcomeColor :: Maybe Player -> Color
 outcomeColor (Just PlayerRed) = red
 outcomeColor (Just PlayerBlue) = blue
 outcomeColor (Just PlayerYellow) = yellow
@@ -218,7 +239,7 @@ outcomeColor Nothing = white
     translates the picture to a specific coordinate on the board
     RETURNS: the color of the player
     EXAMPLES: snapPictureToCell redCell (6,2) == Translate 100.0 260.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0))
--}  
+-}
 snapPictureToCell :: Picture -> (Int, Int) -> Picture
 snapPictureToCell picture (row, column) = translate x y picture
     where x = fromIntegral column * cellWidth + cellWidth * 0.5
@@ -241,8 +262,8 @@ greenCell :: Picture
 greenCell = color green $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.75
 
-boarderCell :: Picture
-boarderCell = color black $ thickCircle 1.0 radius
+borderCell :: Picture
+borderCell = color black $ thickCircle 1.0 radius
     where radius = min cellWidth cellHeight * 0.81
 
 {- cellsOfBoard board cell cellPicture
@@ -259,41 +280,21 @@ cellsOfBoard board cell cellPicture = pictures
 {- redCellsOfBoard board
     draws multiple circles on given coordiantes of the colour declared as argument
     this specification is the same for every following function that goes from Board -> Picture.
-    RETURNS: a picture of a multiple red circles on the board and their position
-    EXAMPLES: redCellsOfBoard (gameBoard emptyBoard) == Pictures [Translate 100.0 100.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0)),
-                                                                  Translate 140.0 100.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0)),
-                                                                  Translate 100.0 140.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0)),
-                                                                  Translate 140.0 140.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0))]
+    RETURNS: a picture of a multiple red circles on the board and their position with a black border
 -}
 redCellsOfBoard :: Board -> Picture
-redCellsOfBoard board = cellsOfBoard board (Full PlayerRed) redCell
+redCellsOfBoard board = cellsOfBoard board (Full PlayerRed) (pictures [borderCell, redCell])
 
-{- redBoarder board
-    this specification is the same for every following function that goes from Board -> Picture.
-    draws four borders of declared colour on coordinates on the board
-    RETURNS: a picture with colored lines forming a rectangle
-    EXAMPLES: redBoarder (gameBoard emptyBoard) == Pictures [Translate 100.0 100.0 (Color (RGBA 0.0 0.0 0.0 1.0) (ThickCircle 1.0 32.4)),
-                                                             Translate 140.0 100.0 (Color (RGBA 0.0 0.0 0.0 1.0) (ThickCircle 1.0 32.4)),
-                                                             Translate 100.0 140.0 (Color (RGBA 0.0 0.0 0.0 1.0) (ThickCircle 1.0 32.4)),
-                                                             Translate 140.0 140.0 (Color (RGBA 0.0 0.0 0.0 1.0) (ThickCircle 1.0 32.4))]
--}
-redBoarder :: Board -> Picture
-redBoarder board = cellsOfBoard board (Full PlayerRed) boarderCell
 
 blueCellsOfBoard :: Board -> Picture
-blueCellsOfBoard board = cellsOfBoard board (Full PlayerBlue) blueCell
-blueBoarder :: Board -> Picture
-blueBoarder board = cellsOfBoard board (Full PlayerBlue) boarderCell
+blueCellsOfBoard board = cellsOfBoard board (Full PlayerBlue) (pictures [borderCell, blueCell])
 
 yellowCellsOfBoard :: Board -> Picture
-yellowCellsOfBoard board = cellsOfBoard board (Full PlayerYellow) yellowCell
-yellowBoarder :: Board -> Picture
-yellowBoarder board = cellsOfBoard board (Full PlayerYellow) boarderCell
+yellowCellsOfBoard board = cellsOfBoard board (Full PlayerYellow) (pictures [borderCell, yellowCell])
 
 greenCellsOfBoard :: Board -> Picture
-greenCellsOfBoard board = cellsOfBoard board (Full PlayerGreen) greenCell
-greenBoarder :: Board -> Picture
-greenBoarder board = cellsOfBoard board (Full PlayerGreen) boarderCell
+greenCellsOfBoard board = cellsOfBoard board (Full PlayerGreen) (pictures [borderCell, greenCell])
+
 
 {-
     This function makes all the lines for the grid
@@ -345,6 +346,43 @@ whiteSquare = pictures [translate 120 120 (rectangleSolid 160 160),
                         translate 480 120 (rectangleSolid 160 160),
                         translate 120 480 (rectangleSolid 160 160),
                         translate 480 480 (rectangleSolid 160 160)]
+-------------- STACKED PIECES ---------------------
+
+redStackedCell :: Board -> Picture
+redStackedCell board = cellsOfBoard board (Stack PlayerRed) (pictures [borderStackedCell,color red $ rectangleSolid (cellWidth * 0.85) (cellHeight * 0.85)])
+
+greenStackedCell :: Board -> Picture
+greenStackedCell board = cellsOfBoard board (Stack PlayerGreen) (pictures [borderStackedCell,color green $ rectangleSolid (cellWidth * 0.85) (cellHeight * 0.85)])
+
+yellowStackedCell :: Board -> Picture
+yellowStackedCell board = cellsOfBoard board (Stack PlayerYellow) (pictures [borderStackedCell,color yellow $ rectangleSolid (cellWidth * 0.85) (cellHeight * 0.85)])
+
+blueStackedCell :: Board -> Picture
+blueStackedCell board = cellsOfBoard board (Stack PlayerBlue) (pictures [borderStackedCell,color blue $ rectangleSolid (cellWidth * 0.85) (cellHeight * 0.85)])
+
+borderStackedCell :: Picture
+borderStackedCell = color black $ rectangleSolid (cellWidth * 0.9) (cellHeight * 0.9)
+
+
+{- playerColor player
+    playerColor gives the color of a player
+    RETURNS: A color, either red, blue, green or yellow
+    EXAMPLE: playerColor PlayerRed = red
+             playerColor PlayerGreen = green
+-}
+playerColor :: Player -> Color
+playerColor player = case player of
+    PlayerRed -> red
+    PlayerBlue -> blue
+    PlayerGreen -> green
+    PlayerYellow -> yellow
+
+{- visualPlayer player
+    shows a visual in the middle of the gameboard what players turn it currently is.
+    RETURNS: Picture of a square that is the same color as a player
+-}
+visualPlayer :: Player -> Picture
+visualPlayer player = color (playerColor player) $ translate 300 300 $ rectangleSolid 40 40
 
 -- dice
 visualDiceBG :: Picture
@@ -407,6 +445,40 @@ boardAsPicture board =
 boardAsGameOverPicture :: Maybe Player -> Board -> Picture
 boardAsGameOverPicture winner board = color (outcomeColor winner) (boardAsPicture board)
 
+{- alignPicturesToScreen picture 
+    Should not be used on BMP pictures, only shapes made with gloss.
+    Takes a picture and aligns it with the screen.
+    RETURNS: Picture with new positions
+-}
+alignPicturesToScreen :: Picture -> Picture
+alignPicturesToScreen = translate (fromIntegral screenWidth * (-0.5))
+                               (fromIntegral screenHeight * (-0.5))
+{- getStartPage game
+    Picture of the startPage
+-}
+getStartPage :: Game -> Picture
+getStartPage game = pictures [head (startPic game)]
+
+{- getSettingsPage game
+    Picture of the settingsPage
+-}
+getSettingsPage :: Game -> Picture
+getSettingsPage game = pictures [head $ tail (startPic game),
+                                 alignPicturesToScreen $ Pictures $ crossForPlayersSetting $ players game]
+                                 
+
+{- crossForPlayersSetting players
+    gives a picture depending on which players are in the game
+-}
+crossForPlayersSetting :: [Player] -> [Picture]
+crossForPlayersSetting []     = [Blank]
+crossForPlayersSetting (x:xs) | x == PlayerRed = translate 90 285 (pictures [rotate 45 $ rectangleSolid 15 80, rotate (-45) $ rectangleSolid 15 80]):crossForPlayersSetting xs
+                              | x == PlayerGreen = translate 230 285 (pictures [rotate 45 $ rectangleSolid 15 80, rotate (-45) $ rectangleSolid 15 80]):crossForPlayersSetting xs
+                              | x == PlayerYellow = translate 370 285 (pictures [rotate 45 $ rectangleSolid 15 80, rotate (-45) $ rectangleSolid 15 80]):crossForPlayersSetting xs
+                              | x == PlayerBlue = translate 510 285 (pictures [rotate 45 $ rectangleSolid 15 80, rotate (-45) $ rectangleSolid 15 80]):crossForPlayersSetting xs
+                              | otherwise = crossForPlayersSetting []
+
+
 
 {- gameAsPicture game
     Translate the game and turns it into a picture
@@ -414,13 +486,21 @@ boardAsGameOverPicture winner board = color (outcomeColor winner) (boardAsPictur
     EXAMPLE: gameAsPicture emptyBoard = Omitted
 -}
 gameAsPicture :: Game -> Picture
-gameAsPicture game = translate (fromIntegral screenWidth * (-0.5))
-                               (fromIntegral screenHeight * (-0.5))
-                               frame
-   where frame = case gameState game of
+gameAsPicture game = case gameState game of
+            -- takes the second element of the list of pictures startPic
+            Settings -> getSettingsPage game
+            -- takes the first element of the list of pictures startPic
+            Start -> getStartPage game
+            Running -> alignPicturesToScreen $ boardAsRunningPicture game
+            GameOver winner -> alignPicturesToScreen $ boardAsGameOverPicture winner (gameBoard game)
+
         -- gameBoard game is a way to get the value of gameBoard from the datatype Game
-            Running -> boardAsRunningPicture (gameBoard game) (dice game)
-            GameOver winner -> boardAsGameOverPicture winner (gameBoard game)
+
+
+
+
+---------------------- FUNCTIONS FOR EVENTS ----------------------
+
 
 {- rndNumGen rnd
     generates a random integer between 1 to 6
@@ -540,13 +620,13 @@ emptySpawnPoint board player | player == PlayerRed = redSpawn !! whenIsEmpty (ch
 whenIsEmpty :: [Cell] -> Int -> Int
 whenIsEmpty [] acc = acc
 whenIsEmpty (x:xs) acc | x == Empty = acc
-                       | otherwise = whenIsEmpty xs acc+1
+                       | otherwise = whenIsEmpty xs acc+1
 
 {- isSpawnEmpty board player
     Checks if the spawn is empty of a player
     RETURNS: True or False
     EXAMPLE: isSpawnEmpty (gameBoard emptyBoard) PlayerRed = False
--} 
+-}
 isSpawnEmpty :: Board -> Player -> Bool
 isSpawnEmpty board player | player == PlayerRed && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
                          | player == PlayerBlue && checkSpawnPoints board player == [Empty,Empty,Empty,Empty] = True
@@ -585,7 +665,103 @@ diceConverter (Dice x) = x
 cellConverter :: Cell -> Player
 cellConverter (Full player) = player
 
+-- returns the position of the mouse as a tuple with ints that is not modified to a cell number
+trueMousePos :: (Float,Float) -> (Int,Int)
+trueMousePos (x,y) = ( floor ((y + (fromIntegral screenHeight * 0.5)))
+                     , floor ((x + (fromIntegral screenWidth * 0.5))))
 
+-- clicking event for the startscreen
+startScreenEvent :: Game -> (Int, Int) -> Game
+-- (the first value is the height so, (420,197) means 420 pixels up and 197 to the right)
+startScreenEvent game coords
+                             | inRange ((420,197),(500, 400)) coords = game {gameState = Running, gamePlayer = head $ players game}
+                             | inRange ((330,199),(365 ,390)) coords = game {gameState = Settings}
+                             | otherwise = game
+-- clicking event for the settingsscreen
+settingsScreenEvent :: Game -> (Int, Int) -> Game
+                                -- for the backbutton
+settingsScreenEvent game coords | inRange ((0,500),(100, 600)) coords = game {gameState = Start}
+                                -- for the clickboxes
+                                | inRange (playerClickBoxRanges $ getPlayerFromRange coords) coords = 
+                                    playerClickBoxSetting game coords $ getPlayerFromRange coords 
+                                | otherwise = game
+                                
+-- click area for the red box
+{- playerClickBoxSetting game coords player
+    Changes the game depending what has been clicked
+    RETURNS: Game
+    EXAMPLE: playerClickBoxSetting game (260,70) PlayerRed -> game {players = delete PlayerRed (players game)}
+-}
+playerClickBoxSetting :: Game -> (Int, Int) -> Player -> Game
+playerClickBoxSetting game coords player = if elem player playersList 
+                                    then if length playersList == 1 then game else game {players = delete player playersList}
+                                    else game {players = player:playersList}
+                                    where playersList = players game
+{- playerClickBoxRanges player
+    Gives a range depending on what player it is
+    RETURNS: ((Int,Int), (Int,Int)) two coordinates in a tuple
+    EXAMPLE: playerClickBoxRanges PlayerRed = ((250,55),(320,125))
+-}
+playerClickBoxRanges :: Player -> ((Int,Int),(Int,Int))
+playerClickBoxRanges player = case player of
+    PlayerRed -> ((250,55),(320,125))
+    PlayerGreen -> ((250,195),(320,265))
+    PlayerYellow -> ((250,335),(320,405))
+    PlayerBlue -> ((250,475),(320,545))
+
+
+{- getPlayerFromRange coords
+    produces a player from a coordinate
+    RETURNS: Player
+    EXAMPLE: getPlayerFromRange (260,70) = PlayerRed
+-}
+getPlayerFromRange :: (Int, Int) -> Player 
+getPlayerFromRange coords | inRange (playerClickBoxRanges PlayerRed) coords = PlayerRed
+                          | inRange (playerClickBoxRanges PlayerGreen) coords = PlayerGreen
+                          | inRange (playerClickBoxRanges PlayerYellow) coords = PlayerYellow
+                          | inRange (playerClickBoxRanges PlayerBlue) coords = PlayerBlue
+                          | otherwise = PlayerRed
+
+{- playerSwitch game
+    Changes the player of the game in the order Red -> Green -> Yellow -> Blue in a circle
+    RETURNS: a game with updated gamePlayer
+    EXAMPLE: playerSwitch emptyBoard = emptyBoard {gamePlayer = PlayerGreen}
+-}
+-- playerSwitch :: Game -> Game
+-- playerSwitch game = 
+    -- case gamePlayer game of
+    --     PlayerRed -> playerSwitchFromRed game
+    --     PlayerGreen -> playerSwitchFromGreen game
+    --     PlayerYellow -> playerSwitchFromYellow game
+    --     PlayerBlue -> playerSwitchFromBlue game
+
+-- playerSwitchFromRed :: Game -> Game
+-- playerSwitchFromRed game | elem PlayerGreen playersList = game {gamePlayer = PlayerGreen}
+--                          | elem PlayerYellow playersList = game {gamePlayer = PlayerYellow}
+--                          | elem PlayerBlue playersList = game {gamePlayer = PlayerBlue}
+--                          | otherwise = game
+--                         where playersList = players game
+
+-- playerSwitchFromGreen :: Game -> Game
+-- playerSwitchFromGreen game | elem PlayerYellow playersList = game {gamePlayer = PlayerYellow}
+--                            | elem PlayerBlue playersList = game {gamePlayer = PlayerBlue}
+--                            | elem PlayerRed playersList = game {gamePlayer = PlayerRed}
+--                            | otherwise = game
+--                         where playersList = players game
+
+-- playerSwitchFromYellow :: Game -> Game
+-- playerSwitchFromYellow game | elem PlayerBlue playersList = game {gamePlayer = PlayerBlue}
+--                             | elem PlayerRed playersList = game {gamePlayer = PlayerRed}
+--                             | elem PlayerGreen playersList = game {gamePlayer = PlayerGreen}
+--                             | otherwise = game
+--                         where playersList = players game
+
+-- playerSwitchFromBlue :: Game -> Game
+-- playerSwitchFromBlue game   | elem PlayerRed playersList = game {gamePlayer = PlayerRed}
+--                             | elem PlayerGreen playersList = game {gamePlayer = PlayerGreen}
+--                             | elem PlayerYellow playersList = game {gamePlayer = PlayerYellow}
+--                             | otherwise = game
+--                         where playersList = players game
 
 {- playerSwitch game
     Changes the player of the game in the order Red -> Green -> Yellow -> Blue in a circle
@@ -593,12 +769,26 @@ cellConverter (Full player) = player
     EXAMPLE: playerSwitch emptyBoard = emptyBoard {gamePlayer = PlayerGreen}
 -}
 playerSwitch :: Game -> Game
-playerSwitch game =
-    case gamePlayer game of
-        PlayerRed -> game {gamePlayer = PlayerGreen}
-        PlayerGreen -> game {gamePlayer = PlayerYellow}
-        PlayerYellow -> game {gamePlayer = PlayerBlue}
-        PlayerBlue -> game {gamePlayer = PlayerRed}
+playerSwitch game | elem (playerOrder !! (1+fromJust (elemIndex player playerOrder))) playersList = game {gamePlayer = (playerOrder !! (1+fromJust (elemIndex player playerOrder)))}
+                      | elem (playerOrder !! (2+fromJust (elemIndex player playerOrder))) playersList = game {gamePlayer = (playerOrder !! (2+fromJust (elemIndex player playerOrder)))}
+                      | elem (playerOrder !! (3+fromJust (elemIndex player playerOrder))) playersList = game {gamePlayer = (playerOrder !! (3+fromJust (elemIndex player playerOrder)))}
+                      | otherwise = game
+                    where playersList = players game
+                          player = gamePlayer game
+
+{-playerOrder 
+    list of Player 
+-}
+playerOrder :: [Player]
+playerOrder = [PlayerRed,PlayerGreen,PlayerYellow,PlayerBlue,PlayerRed,PlayerGreen,PlayerYellow,PlayerBlue]
+
+-- acc should start at 0
+checkIfStackBlocks :: Game -> Dice -> Player -> (Int,Int) -> Int -> Bool
+checkIfStackBlocks game dice player cellCoord acc | diceConverter dice == acc = False
+                                        | board ! (getNextPos cellCoord (Dice (acc+1)) player) == Stack player || 
+                                            board ! (getNextPos cellCoord (Dice (acc+1)) player) == Empty 
+                                                = checkIfStackBlocks game dice player cellCoord (acc+1)
+                                        where board = gameBoard game
 
 
 {- playerTurn game coord
@@ -609,32 +799,78 @@ playerSwitch game =
 -}
 playerTurn :: Game -> (Int, Int) -> Game
 playerTurn game cellCoord
+
+    -- move stacked piece
+    | isCoordCorrect cellCoord && board ! cellCoord == Stack player && diceU 
+        = if dic == Dice 6 then 
+        if board ! (getNextPos cellCoord dic player) == Empty 
+                then game {gameBoard = board // [(cellCoord, Full player),(getNextPos cellCoord dic player, Full player)],
+                                rnd = drop 1 (rnd game),
+                                diceUpdate = False,
+                                dice = Void}
+            else if board ! (getNextPos cellCoord dic player) == Full player
+                -- create stack because two of the same piece ontop of eachother 
+                then game { gameBoard = board // [(cellCoord, Full player),(getNextPos cellCoord dic player, Stack player)],
+                                diceUpdate = False,
+                                rnd = drop 1 (rnd game),
+                                dice = Void}
+                -- kill enemy piece and spawn it in their spawnpoint
+                else  game {gameBoard = board // [(cellCoord, Full player),(getNextPos cellCoord dic player, Full player),
+                (emptySpawnPoint board (cellConverter(board ! (getNextPos cellCoord dic player))),board ! (getNextPos cellCoord dic player))],
+                                rnd = drop 1 (rnd game),
+                                diceUpdate = False,
+                                dice = Void}
+        else 
+            -- if the dice is not 6 and you have to switch player
+            if board ! (getNextPos cellCoord dic player) == Empty 
+                then playerSwitch $ game {gameBoard = board // [(cellCoord, Full player),(getNextPos cellCoord dic player, Full player)],
+                                rnd = drop 1 (rnd game),
+                                diceUpdate = False,
+                                dice = Void}
+            else if board ! (getNextPos cellCoord dic player) == Full player
+                -- create stack because two of the same piece ontop of eachother
+                then playerSwitch $ game { gameBoard = board // [(cellCoord, Full player),(getNextPos cellCoord dic player, Stack player)],
+                                diceUpdate = False,
+                                rnd = drop 1 (rnd game),
+                                dice = Void}
+                -- kill enemy piece and spawn it in their spawnpoint
+                else playerSwitch $ game {gameBoard = board // [(cellCoord, Full player),(getNextPos cellCoord dic player, Full player),
+                (emptySpawnPoint board (cellConverter(board ! (getNextPos cellCoord dic player))),board ! (getNextPos cellCoord dic player))],
+                                rnd = drop 1 (rnd game),
+                                diceUpdate = False,
+                                dice = Void}
+
+
+
     -- removes spawn piece and puts it in the entrypoint
     -- if there is already a piece on that coord the piece disapears
     -- but it does not reappear in the respective spawnpoint
     | isCoordCorrect cellCoord && board ! cellCoord == Full player && dic == Dice 6 && diceU && isInSpawn cellCoord player
         = let entryPoint = getPlayerStart player entryPoints
-        in if board ! entryPoint /= Full player 
-            then if board ! entryPoint == Empty 
-                then playerSwitch $ game { gameBoard = board // [(cellCoord, Empty),(entryPoint, Full player)],
+        in if board ! entryPoint /= Full player
+            then if board ! entryPoint == Empty
+                then game { gameBoard = board // [(cellCoord, Empty),(entryPoint, Full player)],
                                 diceUpdate = False,
                                 rnd = drop 1 (rnd game),
                                 dice = Void}
-                else playerSwitch $ game { gameBoard = board // [(cellCoord, Empty),(entryPoint, Full player),
+                else game { gameBoard = board // [(cellCoord, Empty),(entryPoint, Full player),
                 (emptySpawnPoint board (cellConverter $ board ! entryPoint),board ! entryPoint)],
                                 diceUpdate = False,
                                 rnd = drop 1 (rnd game),
                                 dice = Void}
-            else game
-            
+            else game { gameBoard = board // [(cellCoord, Empty),(entryPoint, Stack player)],
+                                diceUpdate = False,
+                                rnd = drop 1 (rnd game),
+                                dice = Void}
+
     -- function for the winning row
     | isCoordCorrect cellCoord && board ! cellCoord == Full player && diceU == True && isInWinRow cellCoord player
-        = if getNextPosWin cellCoord dic player == (7,7) 
+        = if getNextPosWin cellCoord dic player == (7,7)
             then if (length (findPlayersPos (assocs board) player)) == 1 then game {gameState = GameOver (Just player),
                                                                                     gameBoard = board // [(cellCoord, Empty)],
                                                                                     rnd = drop 1 (rnd game),
                                                                                     dice = Void}
-                else 
+                else
                     playerSwitch $ game { gameBoard = board // [(cellCoord, Empty)],
                                 diceUpdate = False,
                                 rnd = drop 1 (rnd game),
@@ -652,29 +888,59 @@ playerTurn game cellCoord
     -- you can kill your own piece if you walk on it (maybe feature)
     -- cannot do anything if you have no players on the field and your spawnpoint does not have 4 pieces
     | isCoordCorrect cellCoord && board ! cellCoord == Full player && diceU == True && elem cellCoord (playerValidPositions player)
-    = if board ! (getNextPos cellCoord dic player) == Empty then
-        playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player)],
-                           rnd = drop 1 (rnd game),
-                           diceUpdate = False,
-                           dice = Void}
-    else if board ! (getNextPos cellCoord dic player) == Full player then game
-        else playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player),
-        (emptySpawnPoint board (cellConverter(board ! (getNextPos cellCoord dic player))),board ! (getNextPos cellCoord dic player))],
-                           rnd = drop 1 (rnd game),
-                           diceUpdate = False,
-                           dice = Void}
+    -- if the dice is 6 then you can do another turn
+    = if dic == Dice 6 then 
+        if board ! (getNextPos cellCoord dic player) == Empty 
+                then game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player)],
+                                rnd = drop 1 (rnd game),
+                                diceUpdate = False,
+                                dice = Void}
+            else if board ! (getNextPos cellCoord dic player) == Full player
+                -- create stack because two of the same piece ontop of eachother 
+                then game { gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Stack player)],
+                                diceUpdate = False,
+                                rnd = drop 1 (rnd game),
+                                dice = Void}
+                -- kill enemy piece and spawn it in their spawnpoint
+                else  game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player),
+                (emptySpawnPoint board (cellConverter(board ! (getNextPos cellCoord dic player))),board ! (getNextPos cellCoord dic player))],
+                                rnd = drop 1 (rnd game),
+                                diceUpdate = False,
+                                dice = Void}
+        else 
+            -- if the dice is not 6 and you have to switch player
+            if board ! (getNextPos cellCoord dic player) == Empty 
+                then playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player)],
+                                rnd = drop 1 (rnd game),
+                                diceUpdate = False,
+                                dice = Void}
+            else if board ! (getNextPos cellCoord dic player) == Full player
+                -- create stack because two of the same piece ontop of eachother
+                then playerSwitch $ game { gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Stack player)],
+                                diceUpdate = False,
+                                rnd = drop 1 (rnd game),
+                                dice = Void}
+                -- kill enemy piece and spawn it in their spawnpoint
+                else playerSwitch $ game {gameBoard = board // [(cellCoord, Empty),(getNextPos cellCoord dic player, Full player),
+                (emptySpawnPoint board (cellConverter(board ! (getNextPos cellCoord dic player))),board ! (getNextPos cellCoord dic player))],
+                                rnd = drop 1 (rnd game),
+                                diceUpdate = False,
+                                dice = Void}
+
     -- Dice for when there are no pieces on the board
     | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord dicePos && diceU == False &&
-    ((((checkSpawnPoints board player) == [Full player, Full player, Full player, Full player]) || 
+    ((((checkSpawnPoints board player) == [Full player, Full player, Full player, Full player]) ||
     (length (findPlayersPos (assocs board) player) == 3 && checkSpawnPointsWithoutEmpty board player == [Full player, Full player, Full player])) ||
-    (length (findPlayersPos (assocs board) player) == 2 && checkSpawnPointsWithoutEmpty board player == [Full player, Full player]) || 
+    (length (findPlayersPos (assocs board) player) == 2 && checkSpawnPointsWithoutEmpty board player == [Full player, Full player]) ||
     (length (findPlayersPos (assocs board) player) == 1 && checkSpawnPointsWithoutEmpty board player == [Full player]))
        = case Dice (rndNumGen (rnd game)) of
             Dice 6 -> game{rnd = drop 1 (rnd game),dice = Dice (rndNumGen (rnd game)),diceUpdate = True }
             Dice _ -> playerSwitch $ game{rnd = drop 1 (rnd game),dice = Dice (rndNumGen (rnd game)),diceUpdate = False }
+
     -- dice for everything else
     | isCoordCorrect cellCoord && board ! cellCoord == Empty && elem cellCoord dicePos && diceU == False =
         game{rnd = drop 1 (rnd game),dice = Dice (rndNumGen (rnd game)),diceUpdate = True }
+
     -- if something bad is pressed redo the function until something good is pressed
     | otherwise = game
     where board = gameBoard game
@@ -701,8 +967,10 @@ mousePosCell (x,y) = ( floor ((y + (fromIntegral screenHeight * 0.5)) / cellHeig
 transformGame :: Event -> Game -> Game
 transformGame (EventKey(MouseButton LeftButton) Up _ mousePos) game =
     case gameState game of
+        Start -> startScreenEvent game $ trueMousePos mousePos
+        Settings -> settingsScreenEvent game $ trueMousePos mousePos
         Running -> playerTurn game $ mousePosCell mousePos
-        GameOver _ -> emptyBoard
+        GameOver _ -> game {gameState = Start}
 transformGame _ game = game
 {- timeGen
     Generatates the current time in seconds
@@ -720,7 +988,9 @@ timeGen = do
 main :: IO ()
 main = do
     time <- timeGen
-    play window backgroundColor 30 (emptyBoard {rnd = randoms (mkStdGen time)}) gameAsPicture transformGame (const id)
+    settingsPage <- loadBMP "/Users/vidar/Documents/Coding Macbook/haskell/glosstest/app/settingsScreen.bmp"
+    startPage <- loadBMP "/Users/vidar/Documents/Coding Macbook/haskell/glosstest/app/startPicture.bmp"
+    play window backgroundColor 30 (emptyBoard {rnd = randoms (mkStdGen time), startPic = [startPage,settingsPage]}) gameAsPicture transformGame (const id)
 
 
 
@@ -730,39 +1000,39 @@ main = do
 -- test1 = TestCase $ assertEqual "snapPictureToCell redCell (7,7)" Translate 300.0 300.0 (Color (RGBA 1.0 0.0 0.0 1.0) (ThickCircle 1.0 30.0)) (snapPictureToCell redCell (7,7))
 
 -- rndNumGen
-test2 = TestCase $ assertEqual "rndNumGen [0.79291392193]" 5 (rndNumGen [0.79291392193]) 
+test2 = TestCase $ assertEqual "rndNumGen [0.79291392193]" 5 (rndNumGen [0.79291392193])
 
 --isCoordCorrect
-test3 = TestCase $ assertBool "isCoordCorrect (7,7)" (isCoordCorrect (7,7))
+test3 = TestCase $ assertBool "isCoordCorrect (7,7)" (isCoordCorrect (7,7))
 
 --findPlayerPos
-test4 = TestCase $ assertEqual "findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed" [((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)] (findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed)
+test4 = TestCase $ assertEqual "findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed" [((2,2),Full PlayerRed),((2,3),Full PlayerRed),((3,2),Full PlayerRed),((3,3),Full PlayerRed)] (findPlayersPos (assocs(gameBoard emptyBoard)) PlayerRed)
 
 --getNextPos 
-test5 = TestCase $ assertEqual "getNextPos (6,1) (Dice 6) PlayerRed" (8,3) (getNextPos (6,1) (Dice 6) PlayerRed)
-test6 = TestCase $ assertEqual "getNextPos (3,6) (Dice 4) PlayerBlue" (6,5) (getNextPos (3,6) (Dice 4) PlayerBlue)
+test5 = TestCase $ assertEqual "getNextPos (6,1) (Dice 6) PlayerRed" (8,3) (getNextPos (6,1) (Dice 6) PlayerRed)
+test6 = TestCase $ assertEqual "getNextPos (3,6) (Dice 4) PlayerBlue" (6,5) (getNextPos (3,6) (Dice 4) PlayerBlue)
 --getNextPosWin
 test7 = TestCase $ assertEqual "getNextPosWin (12,7) (Dice 6) PlayerYellow"  (8,7) (getNextPosWin (12,7) (Dice 6) PlayerYellow)
 
 --checkSpawnPoints
-test9 = TestCase $ assertEqual "checkSpawnPoints (gameBoard emptyBoard) PlayerBlue" [Full PlayerBlue,Full PlayerBlue,Full PlayerBlue,Full PlayerBlue] (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue)
+test9 = TestCase $ assertEqual "checkSpawnPoints (gameBoard emptyBoard) PlayerBlue" [Full PlayerBlue,Full PlayerBlue,Full PlayerBlue,Full PlayerBlue] (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue)
 
 --whenIsEmpty
-test10 = TestCase $ assertEqual "whenIsEmpty (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue) 0" 4 (whenIsEmpty (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue) 0)
+test10 = TestCase $ assertEqual "whenIsEmpty (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue) 0" 4 (whenIsEmpty (checkSpawnPoints (gameBoard emptyBoard) PlayerBlue) 0)
 
 --emptySpawnPoint?
 -- test11 = TestCase $ assertEqual "emptySpawnPoint (gameBoard emptyBoard) PlayerYellow" () (emptySpawnPoint (gameBoard emptyBoard) PlayerYellow)
 
 --isInSpawn
-test12 = TestCase $ assertBool "isInSpawn (12,2) PlayerGreen" (isInSpawn (12,2) PlayerGreen)
+test12 = TestCase $ assertBool "isInSpawn (12,2) PlayerGreen" (isInSpawn (12,2) PlayerGreen)
 
 --playerSwitch?
-test13 = TestCase $ assertEqual "playerSwitch emptyBoard" (emptyBoard {gamePlayer = PlayerGreen}) (playerSwitch emptyBoard)
+test13 = TestCase $ assertEqual "playerSwitch emptyBoard" (emptyBoard {gamePlayer = PlayerGreen}) (playerSwitch emptyBoard)
 
 --playerTurn?
-test14 = TestCase $ assertEqual "playerTurn emptyBoard{gameBoard = gameBoard (gameBoard emptyBoard) // [((8,4),Full PlayerRed),((3,2),Empty)]} (8,6)" 
-                        (emptyBoard {gameBoard = (gameBoard emptyBoard) // [((8,6),Full PlayerRed),((3,2),Empty)]}) 
+test14 = TestCase $ assertEqual "playerTurn emptyBoard{gameBoard = gameBoard (gameBoard emptyBoard) // [((8,4),Full PlayerRed),((3,2),Empty)]} (8,6)"
+                        (emptyBoard {gameBoard = (gameBoard emptyBoard) // [((8,6),Full PlayerRed),((3,2),Empty)]})
                         (playerTurn (emptyBoard {gameBoard = (gameBoard emptyBoard) // [((8,4),Full PlayerRed),((3,2),Empty)],
                                                 diceUpdate = True,
                                                 dice = Dice 2}) (8,4))
-runtests = runTestTT $ TestList [test2,test3,test4,test5,test6,test7,test9,test10,test12]
+runtests = runTestTT $ TestList [test2,test3,test4,test5,test6,test7,test9,test10,test12]
